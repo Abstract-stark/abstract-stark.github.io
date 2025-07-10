@@ -1,1 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbaz - Portfolio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Font Awesome for icons -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Montserrat:wght@400;700&family=Raleway:wght@300;500&family=Playfair+Display:wght@700&family=Press+Start+2P&display=swap');
+        
+        :root {
+            --primary: #4834d4;
+            --secondary: #686de0;
+            --dark: #130f40;
+            --light: #f9f9f9;
+            --accent: #eb4d4b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark), #1a1a2e);
+            color: var(--light);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: var(--light);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .tagline {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+        
+        .social-container {
+            display: flex;
+            flex-direction: row; /* Align in a single line */
+            justify-content: center;
+            align-items: flex-start; /* Align items to the start of the cross axis */
+            gap: 1rem; /* Reduced gap */
+            flex-wrap: nowrap; /* Prevent wrapping */
+            margin: 3rem 0;
+            overflow-x: auto; /* Enable horizontal scrolling if needed */
+            padding-bottom: 1rem; /* Add padding for scrollbar */
+        }
+        
+        .social-card {
+            position: relative; /* Added for pseudo-elements positioning */
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)); /* Added gradient */
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1rem; /* Reduced padding */
+            width: 250px; /* Smaller width */
+            flex-shrink: 0; /* Prevent shrinking */
+            transition: all 0.4s ease; /* Increased transition time */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            opacity: 0; /* Initial state for slide-up animation */
+            transform: translateY(50px); /* Initial state for slide-up animation */
+            overflow: hidden; /* Hide overflow from pseudo-elements */
+            text-align: center; /* Center text within the box */
+        }
 
+        /* Slide-up animation for social cards and feature cards */
+        .social-card.slide-up,
+        .feature-card.slide-up {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        /* Glow effect */
+        .social-card::before,
+        .social-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(60deg, #8a2be2, #00bcd4, #000000, #8a2be2); /* Purple, Cyan, Black gradient */
+            background-size: 300% 300%; /* Allow for gradient movement */
+            z-index: -1;
+            animation: purpleCyanBlackGradientMove 8s ease infinite alternate; /* Faster moving gradient */
+            filter: blur(60px); /* Increased blur for a softer glow */
+            border-radius: 15px;
+            opacity: 0.7;
+        }
+
+        .social-card::after {
+            filter: blur(50px); /* Slightly less blur for a layered effect */
+            animation-delay: -4s; /* Offset animation for continuous flow */
+            opacity: 0.5;
+        }
+        
+        .social-card:hover {
+            transform: translateY(-15px) scale(1.05); /* Zoom and lift */
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+            background: linear-gradient(145deg, rgba(72, 52, 212, 0.5), rgba(104, 109, 224, 0.5)); /* New gradient on hover */
+        }
+        
+        .social-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        
+        .social-handle {
+            font-size: 1rem;
+            color: var(--light);
+            word-break: break-all;
+        }
+
+        .skill-gamer {
+            font-family: 'Press Start 2P', cursive; /* Gaming font */
+            color: var(--accent); /* Accent color */
+            text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5), 5px 5px 0px var(--primary); /* Layered shadow */
+            letter-spacing: 2px;
+            font-size: 1.5em; /* Slightly larger */
+            display: inline-block; /* For glitch animation */
+            animation: glitch 1s infinite alternate; /* Glitch effect */
+        }
+        
+        .quote-section {
+            text-align: center;
+            margin: 4rem 0;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            /* border-left: 5px solid var(--accent); Removed the line */
+        }
+        
+        .quote {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            font-family: 'Raleway', sans-serif;
+        }
+        
+        .author {
+            font-size: 1.2rem;
+            color: var(--secondary);
+        }
+
+        /* New Features Section Styles */
+        .feature-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 4rem 0;
+        }
+
+        .feature-card {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0; /* Initial state for slide-up animation */
+            transform: translateY(50px); /* Initial state for slide-up animation */
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.8rem;
+        }
+
+        .feature-description {
+            font-size: 1rem;
+            color: var(--light);
+            line-height: 1.5;
+        }
+
+        /* Call to Action Button */
+        .cta-container {
+            text-align: center;
+            margin: 4rem 0;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: var(--light);
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(45deg, var(--secondary), var(--primary));
+        }
+        
+        .animated-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+        
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.2;
+        }
+        
+        .circle-1 {
+            width: 600px;
+            height: 600px;
+            background: #ffffff; /* Changed to pure white */
+            top: -200px;
+            left: -200px;
+            animation: float 12s infinite ease-in-out;
+        }
+        
+        .circle-2 {
+            width: 500px;
+            height: 500px;
+            background: #ffffff; /* Changed to pure white */
+            bottom: -150px;
+            right: -100px;
+            animation: float 10s infinite ease-in-out reverse;
+        }
+        
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            background: #ffffff; /* Changed to pure white */
+            top: 50%;
+            left: 30%;
+            animation: float 8s infinite ease-in-out 2s;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translate(0, 0);
+            }
+            50% {
+                transform: translate(30px, 50px);
+            }
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes glideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes purpleCyanBlackGradientMove {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 100% 100%;
+            }
+        }
+
+        @keyframes glitch {
+            0% {
+                text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5), 5px 5px 0px var(--primary);
+                transform: translate(0, 0);
+            }
+            20% {
+                text-shadow: -3px -3px 0px rgba(0, 0, 0, 0.5), -5px -5px 0px var(--accent);
+                transform: translate(2px, 2px);
+            }
+            40% {
+                text-shadow: 3px -3px 0px rgba(0, 0, 0, 0.5), 5px -5px 0px var(--primary);
+                transform: translate(-2px, 2px);
+            }
+            60% {
+                text-shadow: -3px 3px 0px rgba(0, 0, 0, 0.5), -5px 5px 0px var(--accent);
+                transform: translate(2px, -2px);
+            }
+            80% {
+                text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5), 5px 5px 0px var(--primary);
+                transform: translate(-2px, -2px);
+            }
+            100% {
+                text-shadow: -3px -3px 0px rgba(0, 0, 0, 0.5), -5px 5px 0px var(--accent);
+                transform: translate(0, 0);
+            }
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+        
+        .box-lines {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+        
+        .box-lines .line {
+            width: 50px;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 3px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .tagline {
+                font-size: 1.2rem;
+            }
+            
+            .social-container {
+                flex-wrap: wrap; /* Allow wrapping on smaller screens */
+                justify-content: center;
+            }
+
+            .social-card {
+                width: 100%; /* Full width on small screens */
+            }
+            
+            .quote {
+                font-size: 1.4rem;
+            }
+
+            .feature-section {
+                grid-template-columns: 1fr; /* Stack features on small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="bg-circle circle-1"></div>
+        <div class="bg-circle circle-2"></div>
+        <div class="bg-circle circle-3"></div>
+    </div>
+    
+    <canvas class="particles" id="particles"></canvas>
+    
+    <div class="container">
+        <header>
+            <h1>Arbaz</h1>
+            <div class="box-lines">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line"></div>
+            </div>
+            <p class="tagline">Day one or one day</p>
+        </header>
+        
+        <h2 style="text-align: center; margin: 2rem 0;">About Me</h2>
+        <p style="text-align: center; margin-bottom: 2rem;">I am a visionary digital artisan, perpetually driven by the pursuit of innovation and the creation of unparalleled experiences that deeply resonate with discerning audiences.</p>
+        
+        <h2 style="text-align: center; margin: 2rem 0;">My Skills</h2>
+        <p style="text-align: center; margin-bottom: 2rem;">Undercover <span class="skill-gamer">GAMER</span>, Web Development, Graphic Design, Digital Marketing, and more!</p>
+        
+        <h2 style="text-align: center; margin: 2rem 0;">Projects</h2>
+        <p style="text-align: center; margin-bottom: 2rem;">Check out my work and see how I bring ideas to life.</p>
+
+        <h2 style="text-align: center; margin: 4rem 0 2rem;">Key Features</h2>
+        <section class="feature-section">
+            <div class="feature-card">
+                <i class="fas fa-code feature-icon"></i>
+                <h3 class="feature-title">Clean Code</h3>
+                <p class="feature-description">Crafting elegant and efficient solutions for robust applications.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-palette feature-icon"></i>
+                <h3 class="feature-title">Stunning Design</h3>
+                <p class="feature-description">Bringing visions to life with captivating and user-centric aesthetics.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-rocket feature-icon"></i>
+                <h3 class="feature-title">Performance Optimized</h3>
+                <p class="feature-description">Ensuring lightning-fast experiences for seamless user interaction.</p>
+            </div>
+        </section>
+        
+        <div class="quote-section">
+            <p class="quote">"In the grand tapestry of existence, I am the indelible thread of innovation. I am Iron Man."</p>
+            <p class="author">- Robert Downey Jr.</p>
+        </div>
+        
+        <div class="social-container">
+            <div class="social-card">
+                <h3 class="social-title">Abstract Winner</h3>
+                <p class="social-handle">@Abstract_winner</p>
+            </div>
+            
+            <div class="social-card">
+                <h3 class="social-title">Tlaucher ID</h3>
+                <p class="social-handle">tlaucher_id</p>
+            </div>
+            
+            <div class="social-card">
+                <h3 class="social-title">Snapchat</h3>
+                <p class="social-handle">Arbaz Khan</p>
+            </div>
+        </div>
+
+        <div class="cta-container">
+            <button class="cta-button">Explore My Universe</button>
+        </div>
+    </div>
+    
+    <footer>
+        <p>© 2025 Arbaz Khan. All rights reserved.</p>
+    </footer>
+    
+    <script>
+        // Particle animation
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        let particles = [];
+        const colors = ['#ffffff']; // Changed to pure white
+        
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = Math.random() * 3 - 1.5;
+                this.speedY = Math.random() * 3 - 1.5;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.opacity = Math.random() * 0.8 + 0.2;
+                this.life = Math.random() * 100 + 50;
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.size > 0.2) this.size -= 0.05;
+                this.life--;
+                
+                if (this.x < 0 || this.x > canvas.width) {
+                    this.speedX = -this.speedX;
+                }
+                
+                if (this.y < 0 || this.y > canvas.height) {
+                    this.speedY = -this.speedY;
+                }
+            }
+            
+            draw() {
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function init() {
+            particles = [];
+            for (let i = 0; i < 100; i++) {
+                particles.push(new Particle());
+            }
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (particles[i].life <= 0) {
+                    particles[i] = new Particle();
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        init();
+        animate();
+        
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Intersection Observer for slide-up animation for social cards and feature cards
+        const elementsToAnimate = document.querySelectorAll('.social-card, .feature-card');
+
+        const observerOptions = {
+            root: null, // viewport
+            rootMargin: '0px',
+            threshold: 0.1 // 10% of the element must be visible
+        };
+
+        const slideUpObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('slide-up');
+                    observer.unobserve(entry.target); // Stop observing once animated
+                }
+            });
+        }, observerOptions);
+
+        elementsToAnimate.forEach(element => {
+            slideUpObserver.observe(element);
+        });
+    </script>
+</body>
+</html>
