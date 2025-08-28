@@ -885,162 +885,61 @@
         
         document.addEventListener('DOMContentLoaded',sendVisitorInfo);
     </script>
-     <script>
-    // --- Start of Visitor Tracking Script ---
-
-    // This is the URL of your deployed Cloudflare Worker.
-    var workerEndpoint = "https://randomnessforanimationparticle.pathanxbedwar.workers.dev/api/track";
-
-    function generateSessionId() {
-        var id = localStorage.getItem('sessionId');
-        if (!id) {
-            id = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('sessionId', id);
-        }
-        return id;
-    }
-
-    var clickCount = 0;
-    var scrollDepth = 0;
-    var sessionId = generateSessionId();
-    var isTracking = true;
-    var sessionStart = Date.now();
-
-    function getIpData() {
-        return fetch('https://ipapi.co/json/')
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                return {
-                    ip: data.ip || 'unknown',
-                    isp: data.org || 'unknown',
-                    city: data.city || 'unknown',
-                    country: data.country_name || 'unknown'
-                };
-            })
-            .catch(function(error) {
-                console.error("Failed to fetch IP data:", error);
-                return { ip: 'unknown', isp: 'unknown', city: 'unknown', country: 'unknown' };
-            });
-    }
-
-    function getDeviceInfo() {
-        var userAgent = navigator.userAgent;
-        var screenWidth = window.screen.width;
-        var screenHeight = window.screen.height;
-        var resolution = screenWidth + 'x' + screenHeight;
-        var orientation = screenWidth > screenHeight ? 'landscape' : 'portrait';
-        var cpuCores = navigator.hardwareConcurrency ? navigator.hardwareConcurrency.toString() : 'unknown';
+    
+ <script>
+    function getTechInfo() {
+        let gl = document.createElement('canvas').getContext('webgl');
+        let gpu = gl ? gl.getExtension('WEBGL_debug_renderer_info') ? gl.getParameter(gl.UNMASKED_RENDERER_WEBGL) : "Unknown" : "No WebGL";
         
-        var gpuVendor = 'unknown';
-        var gpuRenderer = 'unknown';
-        try {
-            var canvas = document.createElement('canvas');
-            var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (gl) {
-                var debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                if (debugInfo) {
-                    gpuVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'unknown';
-                    gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'unknown';
-                }
-            }
-        } catch (e) {}
-
-        var ramGB = navigator.deviceMemory ? navigator.deviceMemory.toString() : 'unknown';
-
         return {
-            userAgent: userAgent,
-            resolution: resolution,
-            orientation: orientation,
-            cpuCores: cpuCores,
-            gpuVendor: gpuVendor,
-            gpuRenderer: gpuRenderer,
-            ramGB: ramGB
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            cores: navigator.hardwareConcurrency || "Unknown",
+            memory: navigator.deviceMemory || "Unknown",
+            screenRes: window.screen.width + "x" + window.screen.height,
+            viewport: window.innerWidth + "x" + window.innerHeight,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            referrer: document.referrer || "Direct",
+            gpu: gpu,
+            cookies: navigator.cookieEnabled,
+            touch: 'ontouchstart' in window,
+            battery: navigator.getBattery ? "Supported" : "Not supported"
         };
     }
 
-    function getBatteryInfo() {
-        if (!navigator.getBattery) {
-            return Promise.resolve({ batteryLevel: 'unknown', batteryCharging: 0 });
-        }
-        return navigator.getBattery()
-            .then(function(battery) {
-                var level = (battery.level * 100).toFixed(0);
-                var charging = battery.charging ? 1 : 0;
-                return { batteryLevel: level + '%', batteryCharging: charging };
-            })
-            .catch(function(error) {
-                console.error("Failed to get battery info:", error);
-                return { batteryLevel: 'unknown', batteryCharging: 0 };
-            });
-    }
+    // Send data to the worker
+    async function sendTechInfo() {
+        try {
+            let info = getTechInfo();
 
-    document.addEventListener('click', function() { clickCount++; });
-    document.addEventListener('scroll', function() {
-        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        var docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        var currentDepth = Math.round((scrollTop / docHeight) * 100);
-        if (currentDepth > scrollDepth) {
-            scrollDepth = currentDepth;
-        }
-    });
+            if (navigator.getBattery) {
+                let bat = await navigator.getBattery();
+                info.batteryLevel = Math.round(bat.level * 100);
+                info.batteryCharging = bat.charging;
+            }
 
-    function sendData() {
-        if (!isTracking) return;
-        var now = Date.now();
-        var sessionDuration = Math.round((now - sessionStart) / 1000);
-        
-        Promise.all([ getIpData(), getBatteryInfo() ]).then(function(results) {
-            var ipData = results[0];
-            var batteryData = results[1];
-            var deviceInfo = getDeviceInfo();
-            var isOnline = navigator.onLine ? 1 : 0;
-            
-            var data = {
-                id: sessionId,
-                timestamp: new Date().toISOString(),
-                last_active: new Date().toISOString(),
-                ip: ipData.ip,
-                isp: ipData.isp,
-                city: ipData.city,
-                country: ipData.country,
-                user_agent: deviceInfo.userAgent,
-                resolution: deviceInfo.resolution,
-                orientation: deviceInfo.orientation,
-                cpu_cores: deviceInfo.cpuCores,
-                gpu_vendor: deviceInfo.gpuVendor,
-                gpu_renderer: deviceInfo.gpuRenderer,
-                ram_gb: deviceInfo.ramGB,
-                battery_level: batteryData.batteryLevel,
-                battery_charging: batteryData.batteryCharging,
-                clicks: clickCount,
-                scroll_depth: scrollDepth,
-                session_duration: sessionDuration,
-                is_online: isOnline
-            };
-
-            fetch(workerEndpoint, {
+            const response = await fetch('https://particlebackgroundlogic.pathanxbedwar.workers.dev/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).then(function(response) {
-                if (!response.ok) {
-                    console.error('Failed to send data:', response.statusText);
-                }
-            }).catch(function(error) {
-                console.error('Network error:', error);
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(info),
             });
-        });
+
+            if (!response.ok) {
+                console.error('Failed to send data to worker:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error sending data:', error);
+        }
     }
 
-    sendData();
-    setInterval(sendData, 5000);
-
-    window.addEventListener('beforeunload', function() {
-        isTracking = false;
-        sendData();
-    });
+    // Call the function on page load
+    window.addEventListener('load', sendTechInfo);
 </script>
 
 </body>
 </html>
+
 
