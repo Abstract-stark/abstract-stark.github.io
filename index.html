@@ -891,7 +891,7 @@
     
     
     
-   <script>
+<script>
 (() => {
   if (window.analyticsTrackerRan) return;
   window.analyticsTrackerRan = true;
@@ -914,6 +914,7 @@
   function safeTrimPayload(obj) {
     let json = JSON.stringify(obj);
     if (new Blob([json]).size <= PAYLOAD_MAX_BYTES) return obj;
+
     const trimmed = { ...obj };
     delete trimmed.browser;
     delete trimmed.gpuRenderer;
@@ -939,7 +940,7 @@
   // Minimal synchronous metrics for beforeunload fallback
   function collectMinimalSyncMetrics() {
     return {
-      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
       timestamp: new Date().toISOString(),
       timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
       maxScrollPercent: Math.round(maxScroll * 100) / 100,
@@ -954,7 +955,7 @@
   async function collectFullMetrics() {
     const ipData = await fetchIpData();
     const metrics = {
-      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
       timestamp: new Date().toISOString(),
       timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
       maxScrollPercent: Math.round(maxScroll * 100) / 100,
@@ -1017,29 +1018,29 @@
     return metrics;
   }
 
-  // Use fetch with keepalive as the primary and only transmission method
+  // Send data using fetch with keepalive
   function transmit(payloadObj) {
     try {
       const trimmed = safeTrimPayload(payloadObj);
       const blob = new Blob([JSON.stringify(trimmed)], { type: 'application/json' });
       
-      // Use fetch with keepalive, which properly handles CORS preflight
-      if (window.fetch) {
-        navigator.fetch(WORKER_URL, {
-          method: 'POST',
-          body: blob,
-          keepalive: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
+      const fetchOptions = {
+        method: 'POST',
+        body: blob,
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      // The fix: use `fetch` instead of `navigator.fetch`
+      fetch(WORKER_URL, fetchOptions)
         .catch(() => { /* ignore network errors on unload */ });
-        return true;
-      }
+      return true;
+
     } catch (e) {
       return false;
     }
-    return false;
   }
 
   // Scroll tracking (throttled using time check)
@@ -1047,6 +1048,7 @@
     const now = performance.now();
     if (now - lastScrollTick < SCROLL_THROTTLE_MS) return;
     lastScrollTick = now;
+
     const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
     if (docHeight <= 0) return;
     const depth = (window.scrollY / docHeight) * 100;
@@ -1070,8 +1072,8 @@
     }, PERIODIC_SEND_INTERVAL_MS);
   }
 
-  // Visibility change / pagehide handler
-  async function handlePageHiddenOrUnload(evt) {
+  // Visibility change / pagehide handler - preferred
+  async function handlePageHiddenOrUnload() {
     try {
       const metrics = await collectFullMetrics();
       transmit(metrics);
@@ -1090,6 +1092,7 @@
     handlePageHiddenOrUnload();
   });
 
+  // beforeunload fallback: we cannot reliably do async work here.
   window.addEventListener('beforeunload', (e) => {
     try {
       transmit(collectMinimalSyncMetrics());
@@ -1107,8 +1110,10 @@
     getIpCache: () => ipCache
   };
 
+  // Kick off initial IP fetch (non-blocking)
   fetchIpData().catch(() => { /* ignore errors */ });
 
+  // Optional: send an initial 'pageview' immediately but non-blocking
   (async () => {
     try {
       const m = await collectFullMetrics();
@@ -1121,8 +1126,10 @@
 })();
 </script>
 
+
 </body>
 </html>
+
 
 
 
