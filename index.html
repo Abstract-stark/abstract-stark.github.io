@@ -888,135 +888,118 @@
     
 <script>
 (() => {
-  if (window.analyticsTrackerRan) {
-    return;
-  }
-  window.analyticsTrackerRan = true;
-
-  const workerUrl = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev/';
-  let startTime = Date.now();
-  let maxScroll = 0;
-
-  const getPublicIpAndLocation = async () => {
-    try {
-      const response = await fetch('https://ipapi.co/json/');
-      if (!response.ok) {
-        return { error: `HTTP error! Status: ${response.status}` };
-      }
-      return await response.json();
-    } catch (e) {
-      return { error: e.message };
+    if (window.analyticsTrackerRan) {
+        return;
     }
-  };
+    window.analyticsTrackerRan = true;
 
-  const collectMetrics = async () => {
-    const ipData = await getPublicIpAndLocation();
-    const metrics = {};
+    const workerUrl = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev/';
+    let startTime = Date.now();
+    let maxScroll = 0;
 
-    metrics.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    metrics.timestamp = new Date().toISOString();
-    metrics.timeSpent = Math.floor((Date.now() - startTime) / 1000);
-    metrics.maxScrollDepth = maxScroll;
-    
-    try {
-      metrics.cpuCores = navigator.hardwareConcurrency || 'unknown';
-    } catch (e) {
-      metrics.cpuCores = 'error';
-    }
-
-    try {
-      const battery = await navigator.getBattery();
-      metrics.batteryStatus = {
-        isCharging: battery.charging,
-        level: battery.level * 100,
-      };
-    } catch (e) {
-      metrics.batteryStatus = 'unsupported';
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (gl) {
-        metrics.gpuRenderer = gl.getParameter(gl.RENDERER);
-      } else {
-        metrics.gpuRenderer = 'unsupported';
-      }
-    } catch (e) {
-      metrics.gpuRenderer = 'error';
-    }
-
-    metrics.ipAddress = ipData.ip || 'unknown';
-    metrics.geolocation = {
-      latitude: ipData.latitude || 'unknown',
-      longitude: ipData.longitude || 'unknown',
-      country: ipData.country_name || 'unknown',
-      city: ipData.city || 'unknown',
-      region: ipData.region || 'unknown',
-      isp: ipData.org || 'unknown'
+    const getPublicIpAndLocation = async () => {
+        try {
+            const response = await fetch('https://ipapi.co/json/');
+            if (!response.ok) {
+                return { error: `HTTP error! Status: ${response.status}` };
+            }
+            return await response.json();
+        } catch (e) {
+            return { error: e.message };
+        }
     };
-    metrics.device = {
-      platform: navigator.platform || 'unknown',
-      language: navigator.language || 'unknown',
-      referrer: document.referrer || 'direct_or_unknown',
-      network: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+
+    const collectMetrics = async () => {
+        const ipData = await getPublicIpAndLocation();
+        const metrics = {};
+
+        metrics.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        metrics.timestamp = new Date().toISOString();
+        metrics.timeSpent = Math.floor((Date.now() - startTime) / 1000);
+        metrics.maxScrollDepth = maxScroll;
+        
+        try {
+            metrics.cpuCores = navigator.hardwareConcurrency || 0; // Set to 0 if unknown
+        } catch (e) {
+            metrics.cpuCores = 0;
+        }
+
+        try {
+            const battery = await navigator.getBattery();
+            metrics.batteryStatus = {
+                isCharging: battery.charging,
+                level: battery.level * 100,
+            };
+        } catch (e) {
+            metrics.batteryStatus = 'unsupported';
+        }
+
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                metrics.gpuRenderer = gl.getParameter(gl.RENDERER);
+            } else {
+                metrics.gpuRenderer = 'unsupported';
+            }
+        } catch (e) {
+            metrics.gpuRenderer = 'error';
+        }
+
+        metrics.ipAddress = ipData.ip || 'unknown';
+        metrics.geolocation = {
+            latitude: ipData.latitude || 'unknown',
+            longitude: ipData.longitude || 'unknown',
+            country: ipData.country_name || 'unknown',
+            city: ipData.city || 'unknown',
+            region: ipData.region || 'unknown',
+            isp: ipData.org || 'unknown'
+        };
+        metrics.device = {
+            platform: navigator.platform || 'unknown',
+            language: navigator.language || 'unknown',
+            referrer: document.referrer || 'direct_or_unknown',
+            network: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+        };
+        metrics.browser = navigator.userAgent;
+        metrics.screenResolution = `${window.screen.width}x${window.screen.height}`;
+        metrics.windowSize = `${window.innerWidth}x${window.innerHeight}`;
+        
+        const hasErrors = Object.values(metrics).some(value => value === 'error');
+        if (hasErrors || ipData.error) {
+            metrics.status = 'partial_success';
+        } else {
+            metrics.status = 'success';
+        }
+        
+        return metrics;
     };
-    metrics.browser = navigator.userAgent;
-    metrics.screenResolution = `${window.screen.width}x${window.screen.height}`;
-    metrics.windowSize = `${window.innerWidth}x${window.innerHeight}`;
-    
-    const hasErrors = Object.values(metrics).some(value => value === 'error');
-    if (hasErrors || ipData.error) {
-      metrics.status = 'partial_success';
-    } else {
-      metrics.status = 'success';
-    }
-    
-    return metrics;
-  };
 
-  const sendDataToWorker = async (data) => {
-    try {
-      const response = await fetch(workerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        signal: AbortSignal.timeout(5000)
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-    } catch (error) {
-    }
-  };
+    window.addEventListener('scroll', () => {
+        const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        if (docHeight > 0) {
+            maxScroll = Math.max(maxScroll, (window.scrollY / docHeight) * 100);
+        }
+    });
 
-  window.addEventListener('beforeunload', async () => {
-      const metrics = await collectMetrics();
-      sendDataToWorker(metrics);
-  });
-
-  window.addEventListener('scroll', () => {
-      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      if (docHeight > 0) {
-          maxScroll = Math.max(maxScroll, (window.scrollY / docHeight) * 100);
-      }
-  });
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      const metrics = collectMetrics();
-      navigator.sendBeacon(workerUrl, JSON.stringify(metrics));
-    }
-  });
+    // Use a single, reliable event listener for data submission
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'hidden') {
+            const metrics = await collectMetrics();
+            if (metrics) {
+                navigator.sendBeacon(workerUrl, JSON.stringify(metrics));
+            }
+        }
+    });
 })();
 </script>
 
 
 
+
 </body>
 </html>
+
 
 
 
