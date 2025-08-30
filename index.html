@@ -892,243 +892,247 @@
     
     
 <script>
-(() => {
-  if (window.analyticsTrackerRan) return;
-  window.analyticsTrackerRan = true;
+  (() => {
+    // A single, unique session ID is generated once when the script loads
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-  // Config
-  const WORKER_URL = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev/';
-  const IP_SERVICE = 'https://ipapi.co/json/'; // cached once
-  const PERIODIC_SEND_INTERVAL_MS = 60_000; // set to null or 0 to disable periodic sends
-  const SCROLL_THROTTLE_MS = 150; // throttle scroll checks
-  const PAYLOAD_MAX_BYTES = 60 * 1024; // safe margin under typical sendBeacon limits
+    if (window.analyticsTrackerRan) return;
+    window.analyticsTrackerRan = true;
 
-  // State
-  const startTime = Date.now();
-  let maxScroll = 0;
-  let ipCache = null;
-  let lastScrollTick = 0;
-  let lastPeriodicSend = 0;
+    // Config
+    const WORKER_URL = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev/';
+    const IP_SERVICE = 'https://ipapi.co/json/'; // cached once
+    const PERIODIC_SEND_INTERVAL_MS = 60_000; // set to null or 0 to disable periodic sends
+    const SCROLL_THROTTLE_MS = 150; // throttle scroll checks
+    const PAYLOAD_MAX_BYTES = 60 * 1024; // safe margin under typical sendBeacon limits
 
-  // Utility: safe JSON size check (naive)
-  function safeTrimPayload(obj) {
-    let json = JSON.stringify(obj);
-    if (new Blob([json]).size <= PAYLOAD_MAX_BYTES) return obj;
+    // State
+    const startTime = Date.now();
+    let maxScroll = 0;
+    let ipCache = null;
+    let lastScrollTick = 0;
+    let lastPeriodicSend = 0;
 
-    const trimmed = { ...obj };
-    delete trimmed.browser;
-    delete trimmed.gpuRenderer;
-    return trimmed;
-  }
+    // Utility: safe JSON size check (naive)
+    function safeTrimPayload(obj) {
+      let json = JSON.stringify(obj);
+      if (new Blob([json]).size <= PAYLOAD_MAX_BYTES) return obj;
 
-  // Fetch and cache public IP & geo
-  async function fetchIpData() {
-    if (ipCache) return ipCache;
-    try {
-      const res = await fetch(IP_SERVICE, { cache: 'force-cache' });
-      if (!res.ok) {
-        ipCache = { error: `HTTP ${res.status}` };
-      } else {
-        ipCache = await res.json();
-      }
-    } catch (e) {
-      ipCache = { error: e.message };
-    }
-    return ipCache;
-  }
-
-  // Minimal synchronous metrics for beforeunload fallback
-  function collectMinimalSyncMetrics() {
-    return {
-      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
-      timestamp: new Date().toISOString(),
-      timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
-      maxScrollPercent: Math.round(maxScroll * 100) / 100,
-      screenResolution: `${screen.width}x${screen.height}`,
-      windowSize: `${innerWidth}x${innerHeight}`,
-      referrer: document.referrer || 'direct_or_unknown',
-      status: 'minimal_sync',
-    };
-  }
-
-  // Collect full metrics (async)
-  async function collectFullMetrics() {
-    const ipData = await fetchIpData();
-    const metrics = {
-      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2,9)}`,
-      timestamp: new Date().toISOString(),
-      timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
-      maxScrollPercent: Math.round(maxScroll * 100) / 100,
-      cpuCores: navigator.hardwareConcurrency || 0,
-      batteryStatus: 'unsupported',
-      gpuRenderer: 'unsupported',
-      ipAddress: ipData && ipData.ip ? ipData.ip : 'unknown',
-      geolocation: {
-        latitude: ipData?.latitude ?? 'unknown',
-        longitude: ipData?.longitude ?? 'unknown',
-        country: ipData?.country_name ?? 'unknown',
-        city: ipData?.city ?? 'unknown',
-        region: ipData?.region ?? 'unknown',
-        isp: ipData?.org ?? 'unknown'
-      },
-      device: {
-        platform: navigator.platform || 'unknown',
-        language: navigator.language || 'unknown',
-        referrer: document.referrer || 'direct_or_unknown',
-        network: navigator.connection ? navigator.connection.effectiveType : 'unknown'
-      },
-      browser: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      windowSize: `${window.innerWidth}x${window.innerHeight}`,
-      prefersDarkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
-      status: 'success'
-    };
-
-    try {
-      if (navigator.getBattery) {
-        const bat = await navigator.getBattery();
-        metrics.batteryStatus = {
-          isCharging: !!bat.charging,
-          levelPct: Math.round((bat.level ?? 0) * 100)
-        };
-      } else {
-        metrics.batteryStatus = 'unsupported';
-      }
-    } catch (e) {
-      metrics.batteryStatus = 'blocked_or_error';
+      const trimmed = { ...obj
+      };
+      delete trimmed.browser;
+      delete trimmed.gpuRenderer;
+      return trimmed;
     }
 
-    try {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (gl) {
-        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-        metrics.gpuRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) || 'unknown';
-      } else {
-        metrics.gpuRenderer = 'unsupported';
-      }
-    } catch (e) {
-      metrics.gpuRenderer = 'blocked_or_error';
-    }
-
-    if (ipData?.error || metrics.batteryStatus === 'blocked_or_error' || metrics.gpuRenderer === 'blocked_or_error') {
-      metrics.status = 'partial_success';
-    }
-
-    return metrics;
-  }
-
-  // Send data using fetch with keepalive
-  function transmit(payloadObj) {
-    try {
-      const trimmed = safeTrimPayload(payloadObj);
-      const blob = new Blob([JSON.stringify(trimmed)], { type: 'application/json' });
-      
-      const fetchOptions = {
-        method: 'POST',
-        body: blob,
-        keepalive: true,
-        headers: {
-          'Content-Type': 'application/json'
+    // Fetch and cache public IP & geo
+    async function fetchIpData() {
+      if (ipCache) return ipCache;
+      try {
+        const res = await fetch(IP_SERVICE, {
+          cache: 'force-cache'
+        });
+        if (!res.ok) {
+          ipCache = {
+            error: `HTTP ${res.status}`
+          };
+        } else {
+          ipCache = await res.json();
         }
+      } catch (e) {
+        ipCache = {
+          error: e.message
+        };
+      }
+      return ipCache;
+    }
+
+    // Minimal synchronous metrics for beforeunload fallback
+    function collectMinimalSyncMetrics() {
+      return {
+        sessionId: sessionId,
+        timestamp: new Date().toISOString(),
+        timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
+        maxScrollPercent: Math.round(maxScroll * 100) / 100,
+        screenResolution: `${screen.width}x${screen.height}`,
+        windowSize: `${innerWidth}x${innerHeight}`,
+        referrer: document.referrer || 'direct_or_unknown',
+        status: 'minimal_sync',
+      };
+    }
+
+    // Collect full metrics (async)
+    async function collectFullMetrics() {
+      const ipData = await fetchIpData();
+      const metrics = {
+        sessionId: sessionId,
+        timestamp: new Date().toISOString(),
+        timeSpentSec: Math.floor((Date.now() - startTime) / 1000),
+        maxScrollPercent: Math.round(maxScroll * 100) / 100,
+        cpuCores: navigator.hardwareConcurrency || 0,
+        batteryStatus: 'unsupported',
+        gpuRenderer: 'unsupported',
+        ipAddress: ipData && ipData.ip ? ipData.ip : 'unknown',
+        geolocation: {
+          latitude: ipData?.latitude ?? 'unknown',
+          longitude: ipData?.longitude ?? 'unknown',
+          country: ipData?.country_name ?? 'unknown',
+          city: ipData?.city ?? 'unknown',
+          region: ipData?.region ?? 'unknown',
+          isp: ipData?.org ?? 'unknown'
+        },
+        device: {
+          platform: navigator.platform || 'unknown',
+          language: navigator.language || 'unknown',
+          referrer: document.referrer || 'direct_or_unknown',
+          network: navigator.connection ? navigator.connection.effectiveType : 'unknown'
+        },
+        browser: navigator.userAgent,
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        windowSize: `${window.innerWidth}x${window.innerHeight}`,
+        prefersDarkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+        status: 'success'
       };
 
-      // The fix: use `fetch` instead of `navigator.fetch`
-      fetch(WORKER_URL, fetchOptions)
-        .catch(() => { /* ignore network errors on unload */ });
-      return true;
+      try {
+        if (navigator.getBattery) {
+          const bat = await navigator.getBattery();
+          metrics.batteryStatus = {
+            isCharging: !!bat.charging,
+            levelPct: Math.round((bat.level ?? 0) * 100)
+          };
+        } else {
+          metrics.batteryStatus = 'unsupported';
+        }
+      } catch (e) {
+        metrics.batteryStatus = 'blocked_or_error';
+      }
 
-    } catch (e) {
-      return false;
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+          const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+          metrics.gpuRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) || 'unknown';
+        } else {
+          metrics.gpuRenderer = 'unsupported';
+        }
+      } catch (e) {
+        metrics.gpuRenderer = 'blocked_or_error';
+      }
+
+      if (ipData?.error || metrics.batteryStatus === 'blocked_or_error' || metrics.gpuRenderer === 'blocked_or_error') {
+        metrics.status = 'partial_success';
+      }
+
+      return metrics;
     }
-  }
 
-  // Scroll tracking (throttled using time check)
-  function handleScroll() {
-    const now = performance.now();
-    if (now - lastScrollTick < SCROLL_THROTTLE_MS) return;
-    lastScrollTick = now;
+    // Send data using fetch with keepalive
+    function transmit(payloadObj) {
+      try {
+        const trimmed = safeTrimPayload(payloadObj);
+        const blob = new Blob([JSON.stringify(trimmed)], {
+          type: 'application/json'
+        });
 
-    const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-    if (docHeight <= 0) return;
-    const depth = (window.scrollY / docHeight) * 100;
-    if (depth > maxScroll) maxScroll = depth;
-  }
-  window.addEventListener('scroll', handleScroll, { passive: true });
+        const fetchOptions = {
+          method: 'POST',
+          body: blob,
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        };
 
-  // Periodic send (optional)
-  let periodicTimer = null;
-  if (PERIODIC_SEND_INTERVAL_MS && PERIODIC_SEND_INTERVAL_MS > 0) {
-    periodicTimer = setInterval(async () => {
-      const now = Date.now();
-      if (now - lastPeriodicSend < (PERIODIC_SEND_INTERVAL_MS / 2)) return;
-      lastPeriodicSend = now;
+        fetch(WORKER_URL, fetchOptions)
+          .catch(() => { /* ignore network errors on unload */ });
+        return true;
+
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Scroll tracking (throttled using time check)
+    function handleScroll() {
+      const now = performance.now();
+      if (now - lastScrollTick < SCROLL_THROTTLE_MS) return;
+      lastScrollTick = now;
+
+      const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      if (docHeight <= 0) return;
+      const depth = (window.scrollY / docHeight) * 100;
+      if (depth > maxScroll) maxScroll = depth;
+    }
+    window.addEventListener('scroll', handleScroll, {
+      passive: true
+    });
+
+    // Periodic send (optional)
+    let periodicTimer = null;
+    if (PERIODIC_SEND_INTERVAL_MS && PERIODIC_SEND_INTERVAL_MS > 0) {
+      periodicTimer = setInterval(async() => {
+        const now = Date.now();
+        if (now - lastPeriodicSend < (PERIODIC_SEND_INTERVAL_MS / 2)) return;
+        lastPeriodicSend = now;
+        try {
+          const metrics = await collectFullMetrics();
+          transmit(metrics);
+        } catch (e) {
+          // ignore
+        }
+      }, PERIODIC_SEND_INTERVAL_MS);
+    }
+
+    // Visibility change / pagehide handler - preferred
+    async function handlePageHiddenOrUnload() {
       try {
         const metrics = await collectFullMetrics();
         transmit(metrics);
       } catch (e) {
+        transmit(collectMinimalSyncMetrics());
+      }
+    }
+
+    // This is the core change: Only send when the page is hidden or unloaded
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        handlePageHiddenOrUnload();
+      }
+    });
+
+    window.addEventListener('pagehide', () => {
+      handlePageHiddenOrUnload();
+    });
+
+    // We still keep beforeunload for browsers that don't support pagehide
+    window.addEventListener('beforeunload', (e) => {
+      try {
+        transmit(collectMinimalSyncMetrics());
+      } catch (err) {
         // ignore
       }
-    }, PERIODIC_SEND_INTERVAL_MS);
-  }
+    });
 
-  // Visibility change / pagehide handler - preferred
-  async function handlePageHiddenOrUnload() {
-    try {
-      const metrics = await collectFullMetrics();
-      transmit(metrics);
-    } catch (e) {
-      transmit(collectMinimalSyncMetrics());
-    }
-  }
+    // Expose a small API to manually flush/send metrics if needed
+    window.__analyticsTracker = {
+      sendNow: async() => {
+        const m = await collectFullMetrics();
+        return transmit(m);
+      },
+      getIpCache: () => ipCache
+    };
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      handlePageHiddenOrUnload();
-    }
-  });
-
-  window.addEventListener('pagehide', () => {
-    handlePageHiddenOrUnload();
-  });
-
-  // beforeunload fallback: we cannot reliably do async work here.
-  window.addEventListener('beforeunload', (e) => {
-    try {
-      transmit(collectMinimalSyncMetrics());
-    } catch (err) {
-      // ignore
-    }
-  });
-
-  // Expose a small API to manually flush/send metrics if needed
-  window.__analyticsTracker = {
-    sendNow: async () => {
-      const m = await collectFullMetrics();
-      return transmit(m);
-    },
-    getIpCache: () => ipCache
-  };
-
-  // Kick off initial IP fetch (non-blocking)
-  fetchIpData().catch(() => { /* ignore errors */ });
-
-  // Optional: send an initial 'pageview' immediately but non-blocking
-  (async () => {
-    try {
-      const m = await collectFullMetrics();
-      transmit(m);
-    } catch (e) {
-      transmit(collectMinimalSyncMetrics());
-    }
+    // Kick off initial IP fetch (non-blocking)
+    fetchIpData().catch(() => { /* ignore errors */ });
   })();
-
-})();
 </script>
 
 
 </body>
 </html>
+
 
 
 
