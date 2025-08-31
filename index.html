@@ -1081,8 +1081,63 @@
 
 </script>
 
+<script>
+(() => {
+  const endpoint = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev/';
+
+  let sent = false;
+  function sendOnce() {
+    if (sent) return;
+    sent = true;
+
+    const payload = {
+      sessionId: window.__sid || (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      timestamp: new Date().toISOString(),
+      timeSpentSec: Math.round((performance.now() || 0) / 1000),
+      maxScrollPercent: window.__maxScroll || 0,
+      cpuCores: navigator.hardwareConcurrency || 0,
+      batteryStatus: window.__battery || { levelPct: -1, isCharging: false },
+      gpuRenderer: navigator.userAgent || 'unknown',
+      geolocation: window.__geo, // optional
+      device: {
+        platform: navigator.platform || 'unknown',
+        language: navigator.language || 'unknown',
+        referrer: document.referrer || 'direct_or_unknown',
+        network: (navigator.connection && navigator.connection.effectiveType) || 'unknown'
+      },
+      browser: navigator.userAgent || 'unknown',
+      screenResolution: `${screen.width}x${screen.height}`,
+      windowSize: `${innerWidth}x${innerHeight}`,
+      prefersDarkMode: !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches),
+      status: 'ok'
+    };
+
+    // Send as text/plain to avoid CORS preflight; Worker will parse JSON from text
+    const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+    navigator.sendBeacon(endpoint, blob);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') sendOnce();
+  }, { capture: true });
+
+  addEventListener('pagehide', () => sendOnce(), { capture: true });
+
+  // Track max scroll locally; no network until hide
+  let maxScroll = 0;
+  addEventListener('scroll', () => {
+    const doc = document.documentElement;
+    const scrolled = (scrollY + innerHeight) / Math.max(doc.scrollHeight, 1);
+    maxScroll = Math.max(maxScroll, Math.round(scrolled * 100));
+    window.__maxScroll = maxScroll;
+  }, { passive: true });
+})();
+</script>
+
+
 </body>
 </html>
+
 
 
 
