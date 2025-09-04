@@ -887,6 +887,895 @@
     </script>
     
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abstract</title>
+    <!-- New Fonts: Poppins (Bold) and Lato (Light) for a premium feel -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght=700&family=Lato:wght=300;400&display=swap">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        heading: ['Poppins', 'sans-serif'],
+                        body: ['Lato', 'sans-serif'],
+                    },
+                    colors: {
+                        'green-accent': '#2dd4bf', /* Tailwind's teal-400 */
+                        'blue-highlight': '#60a5fa', /* Tailwind's blue-400 */
+                        'orange-light': '#fcd34d', /* New warm color */
+                        'dark-bg': '#0a0a0a',
+                        'dark-surface': '#1a1a1a',
+                        'mid-gray': '#4b5563',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(40px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        textGlow: {
+                            '0%, 100%': { 'text-shadow': '0 0 5px #2dd4bf, 0 0 10px #2dd4bf' },
+                            '50%': { 'text-shadow': '0 0 10px #60a5fa, 0 0 20px #60a5fa' },
+                        },
+                        gradientMove: {
+                            '0%': { 'background-position': '0% 50%' },
+                            '100%': { 'background-position': '100% 50%' },
+                        },
+                        textFadeIn: {
+                             '0%': { opacity: '0' },
+                             '100%': { opacity: '1' },
+                        },
+                        blinkCursor: {
+                            'from, to': { 'border-color': 'transparent' },
+                            '50%': { 'border-color': 'rgba(255, 255, 255, 0.75)' },
+                        },
+                    },
+                    animation: {
+                        textGlow: 'textGlow 3s infinite alternate',
+                        gradientMove: 'gradientMove 3s linear infinite',
+                        textFadeIn: 'textFadeIn 0.5s ease-in forwards',
+                        blinkCursor: 'blinkCursor 0.75s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            font-family: 'Lato', sans-serif;
+        }
+        .frosted-box {
+            background-color: rgba(26, 26, 26, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        .skill-card-base {
+            background-color: #1a1a1a;
+        }
+        #hero-canvas {
+            z-index: 0;
+        }
+        .section-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+            padding: 2rem 1rem;
+        }
+        .content {
+            z-index: 20;
+            position: relative;
+            max-width: 100%;
+        }
+        .scroll-in {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: opacity, transform;
+        }
+        .scroll-in.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hero-fade-in {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+            animation: textFadeIn 0.5s ease-in forwards;
+        }
+        .typing-text {
+            border-right: 2px solid rgba(255, 255, 255, 0.75);
+            white-space: nowrap;
+            overflow: hidden;
+            width: 0;
+            transition: width 0.05s steps(40, end);
+        }
+        .typing-text.is-typing {
+            width: 100%;
+        }
+        .details-box {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            width: 90%;
+            max-width: 600px;
+        }
+        .mixed-border {
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            border-radius: 1.5rem;
+        }
+        .mixed-border::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #2dd4bf, #60a5fa, #32cd32); 
+            z-index: -1;
+            border-radius: 1.5rem;
+            opacity: 0.2;
+            filter: blur(1px);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .mixed-border:hover::before {
+            transform: scale(1.05);
+            opacity: 0.6;
+        }
+        .social-icon {
+            transition: transform 0.3s ease, fill 0.3s ease, filter 0.3s ease;
+        }
+        .social-icon:hover {
+            transform: translateY(-5px) scale(1.1);
+            filter: drop-shadow(0 0 8px #2dd4bf);
+        }
+        .social-icon.instagram:hover {
+            fill: #60a5fa;
+            filter: drop-shadow(0 0 8px #60a5fa);
+        }
+        .social-icon.github:hover {
+            fill: #2dd4bf;
+            filter: drop-shadow(0 0 8px #2dd4bf);
+        }
+        .animation-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200vh; /* Increased height for a much smoother animation experience */
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+        .animation-text {
+            opacity: 0;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+        }
+        .cursor-typing {
+            display: inline-block;
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 3px solid rgba(255, 255, 255, 0.75);
+            animation: blinkCursor 0.75s step-end infinite;
+        }
+    </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS3L1GFHCQ"></script>
+</head>
+<body class="bg-dark-bg text-gray-200">
+
+    <!-- Three.js Particles Background -->
+    <canvas id="hero-canvas" class="fixed top-0 left-0 w-full h-full"></canvas>
+
+    <!-- Navigation Bar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-dark-bg/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <a href="#" class="ml-2 text-2xl font-bold font-heading text-white tracking-widest">
+                        Abstract
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#about" class="text-mid-gray hover:text-white px-3 py-2 rounded-md font-body font-medium transition-colors duration-200">
+                            About
+                        </a>
+                        <a href="#skills" class="text-mid-gray hover:text-white px-3 py-2 rounded-md font-body font-medium transition-colors duration-200">
+                            Skills
+                        </a>
+                        <a href="#socials" class="text-mid-gray hover:text-white px-3 py-2 rounded-md font-body font-medium transition-colors duration-200">
+                            Socials
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="section-container relative overflow-hidden">
+        <div class="content text-center px-4 max-w-4xl mx-auto">
+            <h1 class="text-6xl md:text-8xl lg:text-9xl font-bold font-heading text-white mb-4 tracking-tight" style="animation: textGlow 3s infinite alternate;">
+                Abstract
+            </h1>
+            <p id="slogan-text" class="text-lg md:text-xl lg:text-2xl text-gray-400 font-body font-light typing-text">
+            </p>
+            <a id="explore-btn" href="#" class="mt-8 inline-block px-8 py-4 rounded-full font-semibold font-body bg-green-accent text-dark-bg hover:scale-105 transition-transform duration-300 hero-fade-in" style="animation-delay: 0.2s;">
+                Explore My World
+            </a>
+        </div>
+    </section>
+
+    <!-- Animation Section (The "Void") -->
+    <section id="animation-section" class="animation-section bg-transparent">
+        <div class="content animation-text" id="animation-content">
+            <h2 id="animation-text-element" class="text-5xl md:text-6xl font-bold font-heading text-white"></h2>
+        </div>
+    </section>
+
+    <!-- About Me Section -->
+    <section id="about" class="section-container relative bg-transparent py-16">
+        <div class="content max-w-4xl mx-auto px-4 text-center scroll-in">
+            <h2 class="text-4xl md:text-5xl font-bold font-heading mb-8 text-green-accent">The Vibe Check</h2>
+            <p class="text-lg md:text-xl text-gray-400 font-body leading-relaxed mb-6">
+                I'm a digital architect, crafting immersive experiences and breaking creative boundaries. Whether it's coding a new reality, editing a cinematic masterpiece, or designing a world-class UI, I thrive on turning abstract ideas into tangible art.
+            </p>
+            <p class="text-lg md:text-xl text-gray-400 font-body leading-relaxed">
+                My journey began with a passion for video games and a curiosity for how they are built. This curiosity evolved into a love for design and a drive to create beautiful, functional websites and digital content. I believe in the power of a clean aesthetic and the thrill of a well-executed plan.
+            </p>
+        </div>
+    </section>
+
+    <!-- Skills Section -->
+    <section id="skills" class="section-container relative bg-transparent py-16">
+        <div class="content max-w-6xl mx-auto px-4 text-center">
+            <h2 class="text-4xl md:text-5xl font-bold font-heading mb-12 text-blue-highlight scroll-in">The Toolset</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Skill Card: Gamer -->
+                <div id="gamer-card" class="p-8 rounded-2xl skill-card-base hover:bg-dark-surface/60 transition-all duration-300 transform hover:scale-105 scroll-in mixed-border cursor-pointer" data-delay="0.05s">
+                    <div class="text-5xl mb-4 text-white">🎮</div>
+                    <h3 class="text-2xl font-bold font-heading text-green-accent mb-2">Gamer</h3>
+                    <p class="text-gray-400 font-body">My keyboard and mouse are my trusty steeds. I game for fun, but my K/D ratio says I'm serious business.</p>
+                </div>
+                <!-- Skill Card: Designer -->
+                <div id="designer-card" class="p-8 rounded-2xl skill-card-base hover:bg-dark-surface/60 transition-all duration-300 transform hover:scale-105 scroll-in mixed-border cursor-pointer" data-delay="0.1s">
+                    <div class="text-5xl mb-4 text-white">🎨</div>
+                    <h3 class="text-2xl font-bold font-heading text-blue-highlight mb-2">Designer</h3>
+                    <p class="text-gray-400 font-body">I design websites that break the internet—and then I fix them. The aesthetic is always a priority.</p>
+                </div>
+                <!-- Skill Card: Friends -->
+                <div id="friends-card" class="p-8 rounded-2xl skill-card-base hover:bg-dark-surface/60 transition-all duration-300 transform hover:scale-105 scroll-in mixed-border cursor-pointer" data-delay="0.15s">
+                    <div class="text-5xl mb-4 text-white">🤝</div>
+                    <h3 class="text-2xl font-bold font-heading text-green-accent mb-2">Friends</h3>
+                    <p class="text-gray-400 font-body">My friends are a vibe. We get together to make cinematic b-roll of our everyday lives.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="details-box frosted-box rounded-lg p-6 text-center">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="details-title" class="text-2xl font-bold font-heading text-green-accent"></h3>
+            <button id="close-modal" class="text-mid-gray hover:text-white text-3xl">&times;</button>
+        </div>
+        <div id="details-content" class="text-gray-400 font-body grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <!-- Content will be injected here -->
+        </div>
+    </div>
+
+    <!-- Footer with Socials and Copyright -->
+    <footer id="socials" class="bg-dark-bg/90 py-12">
+        <div class="max-w-4xl mx-auto text-center px-4">
+            <h3 class="text-xl md:text-2xl font-bold font-heading mb-4 text-orange-light">Connect with me. I don't bite. (Promise)</h3>
+            <div class="flex justify-center space-x-6 mb-8">
+                <!-- Snapchat (using a custom SVG) -->
+                <a href="#" class="social-icon text-gray-400 hover:text-green-accent">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 16c-1.1-1.1-3.2-1.2-4.2-1.2h-1c-1 0-3.1.1-4.2 1.2c-1.1 1.1-1.1 2.2-1.1 3.2V22c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-2.8c0-1.1 0-2.2-1.1-3.2z"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </a>
+                <!-- Instagram (using a custom SVG) -->
+                <a href="#" class="social-icon instagram text-gray-400 hover:text-blue-highlight">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                </a>
+                <!-- GitHub (using a custom SVG) -->
+                <a href="#" class="social-icon github text-gray-400 hover:text-green-accent">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                    </svg>
+                </a>
+            </div>
+            <p class="text-sm text-center text-gray-400 font-body">&copy; 2025 Abstract. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Set up the scene, camera, and renderer for the particle background
+        let scene, camera, renderer, particles;
+        let mouseX = 0, mouseY = 0;
+        let mouseActive = false;
+        const colors = [0x2dd4bf, 0x60a5fa, 0x32cd32];
+        let originalPositions, originalColors; // To store initial particle positions and colors
+        let targetPositions = []; // To store target positions for the animations
+        let animationProgress = 0; // 0 to 1, controlled by scroll
+        let animationState = 'parallax'; // 'parallax', 'forming', 'glowing', 'scattering'
+        const normalParticleSize = 2.5;
+        const smallParticleSize = 1; // Smaller particle size to prevent a blinding flash
+        
+        let lastScrollY = 0;
+        let lastScrollTime = Date.now();
+        const stopThreshold = 100; // Time in ms to consider scrolling stopped
+        const slowLerpFactor = 0.0002; // Slower lerp for a smoother effect when not scrolling
+        let isScrolling = false;
+        let isAutoScrolling = false;
+        const autoScrollSpeed = 5; // Slower speed for a smoother auto-scroll
+
+        // Define the scroll boundaries for the animation section
+        let heroSection, animationSection, aboutSection;
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0a0a, 0.002);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 100;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('hero-canvas'), antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Create particles
+            const particleMaterial = new THREE.PointsMaterial({
+                size: normalParticleSize,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                sizeAttenuation: true,
+                vertexColors: true
+            });
+
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 15000;
+            const positions = new Float32Array(particleCount * 3);
+            const particleColors = new Float32Array(particleCount * 3);
+            const particleSizes = new Float32Array(particleCount);
+            originalPositions = new Float32Array(particleCount * 3);
+            originalColors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                positions[i * 3 + 0] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+                originalPositions[i * 3 + 0] = x;
+                originalPositions[i * 3 + 1] = y;
+                originalPositions[i * 3 + 2] = z;
+                
+                const color = new THREE.Color(colors[Math.floor(Math.random() * colors.length)]);
+                particleColors[i * 3 + 0] = color.r;
+                particleColors[i * 3 + 1] = color.g;
+                particleColors[i * 3 + 2] = color.b;
+                originalColors[i * 3 + 0] = color.r;
+                originalColors[i * 3 + 1] = color.g;
+                originalColors[i * 3 + 2] = color.b;
+                
+                particleSizes[i] = normalParticleSize;
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+            particleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+            particles = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particles);
+
+            // Setup hollow triangle target positions
+            setupHollowTrianglePositions(particleCount);
+
+            // Get section elements for scroll tracking
+            heroSection = document.getElementById('hero');
+            animationSection = document.getElementById('animation-section');
+            aboutSection = document.getElementById('about');
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('mousemove', onDocumentMouseMove, false);
+            document.addEventListener('touchmove', onDocumentTouchMove, false);
+            window.addEventListener('scroll', onScroll, false);
+            document.getElementById('explore-btn').addEventListener('click', handleExploreClick);
+        }
+
+        // Set up the target positions for the particles to form an upside-down, straight triangle
+        function setupHollowTrianglePositions(particleCount) {
+            targetPositions = new Float32Array(particleCount * 3);
+            const outerSize = 40; // Increased size for a bigger triangle
+            const halfEdgeCount = Math.floor(particleCount / 3);
+            let particleIndex = 0;
+
+            // Vertices for an inverted (ulta), straight triangle
+            const vertices = [
+                new THREE.Vector3(0, -outerSize, 0),
+                new THREE.Vector3(-outerSize * 0.866, outerSize * 0.5, 0),
+                new THREE.Vector3(outerSize * 0.866, outerSize * 0.5, 0)
+            ];
+
+            // Distribute particles evenly along the triangle edges to create a hollow ring
+            for (let i = 0; i < 3; i++) {
+                const start = vertices[i];
+                const end = vertices[(i + 1) % 3];
+
+                for (let j = 0; j < halfEdgeCount; j++) {
+                    if (particleIndex >= particleCount) break;
+                    const t = j / (halfEdgeCount - 1);
+                    
+                    // Simple linear interpolation for straight lines
+                    const pos = new THREE.Vector3().lerpVectors(start, end, t);
+                    
+                    targetPositions[particleIndex * 3] = pos.x;
+                    targetPositions[particleIndex * 3 + 1] = pos.y;
+                    targetPositions[particleIndex * 3 + 2] = pos.z;
+                    particleIndex++;
+                }
+            }
+        }
+
+        // Main animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = Date.now() * 0.0001;
+            const smoothness = 0.1;
+            
+            if (Date.now() - lastScrollTime > stopThreshold && !isAutoScrolling) {
+                isScrolling = false;
+            } else {
+                isScrolling = true;
+            }
+
+            // Only apply parallax effect when NOT in the animation state
+            if ((animationState === 'parallax' || animationState === 'scattering') && !isAutoScrolling) {
+                if (mouseActive) {
+                    const targetX = (mouseX / window.innerWidth - 0.5) * 200;
+                    const targetY = (mouseY / window.innerHeight - 0.5) * -200;
+                    camera.position.x += (targetX - camera.position.x) * smoothness;
+                    camera.position.y += (targetY - camera.position.y) * smoothness;
+                } else {
+                    camera.position.x = 200 * Math.sin(now * 0.2);
+                    camera.position.y = 200 * Math.cos(now * 0.2);
+                }
+            } else {
+                // When in the animation, snap camera to center
+                const targetX = 0;
+                const targetY = 0;
+                camera.position.x += (targetX - camera.position.x) * smoothness;
+                camera.position.y += (targetY - camera.position.y) * smoothness;
+            }
+
+            camera.lookAt(scene.position);
+            updateParticles();
+            renderer.render(scene, camera);
+        }
+
+        function updateParticles() {
+            const positions = particles.geometry.attributes.position.array;
+            const colors = particles.geometry.attributes.color.array;
+            const sizes = particles.geometry.attributes.size.array;
+            
+            for (let i = 0; i < particles.geometry.attributes.position.count; i++) {
+                const i3 = i * 3;
+                let currentPos = new THREE.Vector3(positions[i3], positions[i3 + 1], positions[i3 + 2]);
+                let targetPos = new THREE.Vector3();
+                let originalPos = new THREE.Vector3(originalPositions[i3], originalPositions[i3 + 1], originalPositions[i3 + 2]);
+                let currentColor = new THREE.Color(colors[i3], colors[i3 + 1], colors[i3 + 2]);
+                let targetColor = new THREE.Color();
+                let originalColor = new THREE.Color(originalColors[i3], originalColors[i3 + 1], originalColors[i3 + 2]);
+                let lerpFactor = isScrolling ? 0.05 : slowLerpFactor;
+
+                // Determine target based on animation state
+                if (animationState === 'forming') {
+                    targetPos.set(targetPositions[i3], targetPositions[i3 + 1], targetPositions[i3 + 2]);
+                    targetColor.set(0xffffff); // Ensure white color
+                } else if (animationState === 'glowing') {
+                    // Glowing effect: pulse the brightness of the particles
+                    const glow = Math.sin(Date.now() * 0.005) * 0.5 + 0.5; // 0.5 to 1.5 multiplier
+                    targetPos.set(targetPositions[i3], targetPositions[i3 + 1], targetPositions[i3 + 2]);
+                    targetColor.set(0xffffff).multiplyScalar(0.7 + glow * 0.3); // Glow from 70% to 100% white
+                } else if (animationState === 'scattering') {
+                    targetPos.copy(originalPos);
+                    // Fade back to original colors
+                    targetColor.copy(originalColor);
+                    lerpFactor = isScrolling ? 0.05 : slowLerpFactor;
+                } else { // 'parallax'
+                    targetPos.copy(originalPos);
+                    targetColor.copy(originalColor);
+                }
+                
+                let currentLerpProgress = animationProgress;
+                if (!isScrolling) {
+                    currentLerpProgress = 0.01;
+                }
+                
+                // Color and Position transition
+                currentPos.lerp(targetPos, currentLerpProgress);
+                currentColor.lerp(targetColor, currentLerpProgress);
+
+                // Size transition: Small while forming/glowing, normal otherwise
+                let targetSize = normalParticleSize;
+                if (animationState === 'forming' || animationState === 'glowing') {
+                    targetSize = smallParticleSize;
+                }
+                const currentSize = sizes[i];
+                sizes[i] = currentSize + (targetSize - currentSize) * (isScrolling ? currentLerpProgress : slowLerpFactor);
+                
+                positions[i3] = currentPos.x;
+                positions[i3 + 1] = currentPos.y;
+                positions[i3 + 2] = currentPos.z;
+                
+                colors[i3] = currentColor.r;
+                colors[i3 + 1] = currentColor.g;
+                colors[i3 + 2] = currentColor.b;
+            }
+
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.color.needsUpdate = true;
+            particles.geometry.attributes.size.needsUpdate = true;
+        }
+
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            onScroll();
+        }
+
+        // Handle mouse movement
+        function onDocumentMouseMove(event) {
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+            mouseActive = true;
+        }
+
+        // Handle touch movement
+        function onDocumentTouchMove(event) {
+            if (event.touches.length > 0) {
+                mouseX = event.touches[0].clientX;
+                mouseY = event.touches[0].clientY;
+                mouseActive = true;
+            }
+        }
+
+        // Handle "Explore My World" button click
+        function handleExploreClick(event) {
+            event.preventDefault();
+            isAutoScrolling = true;
+            autoScroll();
+        }
+        
+        // New function to auto-scroll the page
+        function autoScroll() {
+            const scrollTarget = animationSection.offsetTop + (window.innerHeight * 0.5); // Scroll past the animation section
+            const currentScroll = window.scrollY;
+
+            if (currentScroll < scrollTarget) {
+                window.scrollBy(0, autoScrollSpeed);
+                requestAnimationFrame(autoScroll);
+            } else {
+                isAutoScrolling = false;
+                window.location.hash = 'about';
+            }
+        }
+        
+        // This is the core scroll logic for the new section
+        function onScroll() {
+            const scrollY = window.scrollY;
+            lastScrollY = scrollY;
+            lastScrollTime = Date.now();
+            
+            const heroHeight = heroSection.offsetHeight;
+            const animationContentEl = document.getElementById('animation-content');
+            const aboutTop = aboutSection.offsetTop;
+            const animationTextElement = document.getElementById('animation-text-element');
+
+            // Define new scroll boundaries for the combined animation phases
+            const startAnimation = heroHeight;
+            const formingEnd = startAnimation + 1500; // Increased distance for a smoother, longer formation
+            const glowingEnd = formingEnd + 5; // Very short glow period for 0.5 second stay
+            const scatteringEnd = glowingEnd + 1500; // Increased scatter period for smoother effect
+            
+            if (scrollY >= startAnimation && scrollY < aboutTop) {
+                if (scrollY < formingEnd) {
+                    // Phase 1: Forming the triangle
+                    animationState = 'forming';
+                    animationProgress = (scrollY - startAnimation) / (formingEnd - startAnimation);
+                    animationContentEl.style.opacity = 0;
+                } else if (scrollY >= formingEnd && scrollY < scatteringEnd) {
+                    // Phase 2: Glowing & scattering
+                    animationState = 'glowing';
+                    animationProgress = 1; 
+                    const scatteringProgress = (scrollY - glowingEnd) / (scatteringEnd - glowingEnd);
+                    animationContentEl.style.opacity = scatteringProgress;
+                    
+                    // Trigger the text typing animation once
+                    if (!animationTextElement.classList.contains('typing-started')) {
+                        typeAnimationText();
+                    }
+                } else {
+                    // Phase 3: Text disappears and About section appears
+                    const textFadeOutProgress = (scrollY - scatteringEnd) / (aboutTop - scatteringEnd);
+                    animationContentEl.style.opacity = 1 - textFadeOutProgress;
+                    animationState = 'parallax'; // Reset state for the next section
+                }
+            } else {
+                // Not in the animation zone
+                animationState = 'parallax';
+                animationContentEl.style.opacity = 0;
+            }
+        }
+        
+        // Final initialization
+        window.onload = function() {
+            init();
+            animate();
+            setupScrollAnimations();
+            
+            // Set the slogan text directly
+            const sloganText = "ho there";
+            const sloganElement = document.getElementById('slogan-text');
+            const exploreBtn = document.getElementById('explore-btn');
+
+            let i = 0;
+            const typingSpeed = 50;
+            let sloganTyping;
+
+            function typeSlogan() {
+                if (i < sloganText.length) {
+                    sloganElement.textContent += sloganText.charAt(i);
+                    i++;
+                    sloganTyping = setTimeout(typeSlogan, typingSpeed);
+                } else {
+                    sloganElement.style.borderRight = 'none';
+                }
+            }
+
+            setTimeout(() => {
+                typeSlogan();
+                sloganElement.classList.add('is-typing');
+                exploreBtn.style.opacity = '1';
+            }, 200);
+        };
+
+        // New function using IntersectionObserver for the scroll-in animations
+        function setupScrollAnimations() {
+            const observerOptions = {
+                root: null, // viewport as the root
+                rootMargin: '0px',
+                threshold: 0.2 // Trigger when 20% of the element is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const target = entry.target;
+                        const delay = target.dataset.delay ? parseFloat(target.dataset.delay) * 1000 : 0;
+                        setTimeout(() => {
+                            target.classList.add('is-visible');
+                        }, delay);
+                        observer.unobserve(target); // Stop observing once it's visible
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.scroll-in').forEach(element => {
+                observer.observe(element);
+            });
+        }
+        
+        // New function for the animation section's "Hello" style typing
+        function typeAnimationText() {
+            const textToType = "This is a test text";
+            const textElement = document.getElementById('animation-text-element');
+            
+            // Prevent multiple calls
+            if (textElement.classList.contains('typing-started')) return;
+            textElement.classList.add('typing-started');
+            
+            let charIndex = 0;
+            textElement.classList.add('cursor-typing');
+
+            function typeChar() {
+                if (charIndex < textToType.length) {
+                    textElement.textContent += textToType.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeChar, 100);
+                } else {
+                    textElement.style.borderRight = 'none';
+                    textElement.classList.remove('cursor-typing');
+                }
+            }
+
+            typeChar();
+        }
+
+        // Interactive card logic
+        const gamerCard = document.getElementById('gamer-card');
+        const designerCard = document.getElementById('designer-card');
+        const friendsCard = document.getElementById('friends-card');
+        const detailsModal = document.getElementById('details-modal');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsContent = document.getElementById('details-content');
+        const closeModalButton = document.getElementById('close-modal');
+
+        const games = [
+            { name: 'Free Fire', icon: '🔫' },
+            { name: 'Clash of Clans', icon: '🏰' },
+            { name: 'PUBG', icon: '🎯' },
+            { name: 'Minecraft', icon: '⛏️' },
+            { name: 'Asphalt 9', icon: '🏎️' }
+        ];
+
+        const designerApps = [
+            { name: 'Wondershare Filmora', icon: '🎬' },
+            { name: 'Motion', icon: '🚀' },
+            { name: 'CapCut', icon: '✂️' },
+            { name: 'UI Design', icon: '✨' }
+        ];
+
+        const friendsData = [
+            { name: 'still under work', icon: '⚙️'}
+        ];
+
+        function showDetails(title, data) {
+            detailsTitle.textContent = title;
+            detailsContent.innerHTML = '';
+            if (title === 'Friends') {
+                detailsContent.className = 'text-gray-400 font-body text-center';
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'text-xl font-bold p-8';
+                messageDiv.textContent = 'Still under work';
+                detailsContent.appendChild(messageDiv);
+            } else {
+                detailsContent.className = 'text-gray-400 font-body grid grid-cols-2 sm:grid-cols-3 gap-4';
+                data.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex flex-col items-center justify-center p-4 rounded-xl frosted-box cursor-pointer hover:bg-dark-surface/80 transition-all duration-200';
+                    itemDiv.innerHTML = `
+                        <div class="text-3xl mb-2">${item.icon}</div>
+                        <span class="text-sm font-body font-semibold text-gray-200 text-center">${item.name}</span>
+                    `;
+                    detailsContent.appendChild(itemDiv);
+                });
+            }
+            
+            detailsModal.style.display = 'block';
+        }
+
+        gamerCard.addEventListener('click', () => {
+            showDetails('Games I Play', games);
+        });
+
+        designerCard.addEventListener('click', () => {
+            showDetails('Tools I Use', designerApps);
+        });
+
+        friendsCard.addEventListener('click', () => {
+            showDetails('Friends', friendsData);
+        });
+
+        closeModalButton.addEventListener('click', () => {
+            detailsModal.style.display = 'none';
+        });
+
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', (event) => {
+            if (event.target === detailsModal) {
+                detailsModal.style.display = 'none';
+            }
+        });
+    </script>
+    
+    <!-- Google Analytics and Visitor Info Script -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments)}
+        gtag('js', new Date());
+        gtag('config', 'G-HS3L1GFHCQ');
+        
+        function getCanvasFingerprint(){
+            try{
+                const a=document.createElement('canvas');
+                const b=a.getContext('2d');
+                b.textBaseline='top';
+                b.font='14px "Arial"';
+                b.fillText('fingerprint',2,2);
+                return a.toDataURL()
+            }catch{
+                return''
+            }
+        }
+        
+        function getGPUInfo(){
+            try{
+                const a=document.createElement('canvas');
+                const b=a.getContext('webgl')||a.getContext('experimental-webgl');
+                if(!b)return{vendor:'Unknown',renderer:'Unknown'};
+                const c=b.getExtension('WEBGL_debug_renderer_info');
+                return{
+                    vendor:b.getParameter(c.UNMASKED_VENDOR_WEBGL)||'Unknown',
+                    renderer:b.getParameter(c.UNMASKED_RENDERER_WEBGL)||'Unknown'
+                }
+            }catch{
+                return{vendor:'Unknown',renderer:'Unknown'}
+            }
+        }
+        
+        async function sendVisitorInfo(){
+            const a=getGPUInfo();
+            const b=await navigator.getBattery().then(a=>({
+                level:Math.round((a.level||0)*100),
+                charging:a.charging
+            })).catch(()=>({
+                level:null,
+                charging:null
+            }));
+            const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+            const d='ontouchstart'in window||navigator.maxTouchPoints>0;
+            const e=Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const f={
+                ua:navigator.userAgent,
+                lang:navigator.language,
+                platform:navigator.platform,
+                cores:navigator.hardwareConcurrency,
+                mem_gb:navigator.deviceMemory,
+                screen_size:`${window.screen.width}x${window.screen.height}`,
+                color_depth:window.screen.colorDepth,
+                pixel_ratio:window.devicePixelRatio,
+                gpu_vendor:a.vendor,
+                gpu_renderer:a.renderer,
+                canvas_hash:getCanvasFingerprint(),
+                battery_level:b.level,
+                battery_charging:b.charging,
+                network_type:c?c.effectiveType:'Unknown',
+                touch_support:d,
+                time_zone:e
+            };
+            gtag('event','visitor_info',{...f,non_interaction:true})
+        }
+        
+        document.addEventListener('DOMContentLoaded',sendVisitorInfo);
+    </script>
+    
+
     <script>
     (async function() {
         /**
@@ -1073,18 +1962,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
