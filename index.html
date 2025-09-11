@@ -887,193 +887,175 @@
     </script>
     
 <script>
-    (async function() {
-        /**
-         * The Advanced Analytics Tracker
-         *
-         * This script is designed to be a "fire-and-forget" client-side analytics tracker.
-         * It intelligently sends data only when the user is leaving the page,
-         * ensuring no network requests appear on initial page load.
-         *
-         * It uses two different strategies based on device type for maximum reliability:
-         * 1. Desktop: Data is sent only on a full tab closure or navigation away,
-         * using the 'pagehide' event. This avoids triggering on tab swaps.
-         * 2. Mobile: Data is sent when the page is hidden, which is a common action
-         * (e.g., switching to another app). This is handled by the 'visibilitychange' event.
-         */
+    <script>
+(function() {
+    if (window.__analyticsTracker) return;
+    window.__analyticsTracker = true;
 
-        //--- Configuration ---
-        const WORKER_URL = "https://particlebackgroundlogic.pathanxbedwar.workers.dev";
-        const SESSION_ID_KEY = 'sessionId';
-        const IP_SERVICE_URL = 'https://api.ipify.org?format=json';
-        const GEO_SERVICE_URL = 'https://ipapi.co/json/';
-        
-        // Use an IIFE and a global flag to prevent the script from running more than once.
-        if (window.__analyticsTracker) {
-            console.warn("Analytics tracker is already running. Skipping initialization.");
-            return;
+    const workerUrl = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev';
+    const IP_SERVICE_URL = 'https://api.ipify.org?format=json';
+    const GEO_SERVICE_URL = 'https://ipapi.co/json/';
+    const SESSION_ID_KEY = 'sessionId';
+
+    let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
+    if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem(SESSION_ID_KEY, sessionId);
+    }
+
+    const startTime = performance.now();
+    let maxScrollPercent = 0;
+    let dataSent = false;
+
+    const tracker = {
+        sessionId: sessionId,
+        status: 'initial',
+        ipAddress: 'N/A',
+        geolocation: {
+            country: 'N/A',
+            city: 'N/A',
+            region: 'N/A',
+            isp: 'N/A',
+            latitude: 'N/A',
+            longitude: 'N/A'
+        },
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        referrer: document.referrer || 'direct_or_unknown',
+        cpuCores: navigator.hardwareConcurrency || 'Unknown',
+        gpuVendor: 'N/A',
+        gpuRenderer: 'N/A',
+        platform: navigator.platform,
+        browser: 'N/A',
+        deviceName: 'N/A',
+        batteryLevel: 'N/A',
+        batteryCharging: 'N/A',
+        deviceType: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        windowSize: `${window.innerWidth}x${window.innerHeight}`,
+        prefersDarkMode: 'N/A',
+        timeOnPage: 'N/A',
+        maxScrollPercent: 'N/A',
+        timestamp: 'N/A'
+    };
+
+    async function collectAsyncData() {
+        try {
+            const [ipResponse, geoResponse] = await Promise.all([
+                fetch(IP_SERVICE_URL),
+                fetch(GEO_SERVICE_URL)
+            ]);
+            const ipData = await ipResponse.json();
+            const geoData = await geoResponse.json();
+            tracker.ipAddress = ipData.ip;
+            tracker.geolocation = {
+                country: geoData.country_name,
+                city: geoData.city,
+                region: geoData.region,
+                isp: geoData.org,
+                latitude: geoData.latitude,
+                longitude: geoData.longitude
+            };
+        } catch {
+            tracker.ipAddress = 'unknown';
+            tracker.geolocation = {
+                country: 'unknown',
+                city: 'unknown',
+                region: 'unknown',
+                isp: 'unknown',
+                latitude: 0.0,
+                longitude: 0.0
+            };
         }
-        window.__analyticsTracker = true;
 
-        //--- Session Management ---
-        let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
-        if (!sessionId) {
-            sessionId = crypto.randomUUID();
-            sessionStorage.setItem(SESSION_ID_KEY, sessionId);
-        }
-        const startTime = Date.now();
-        let maxScrollPercent = 0;
-        let hasSentOnExit = false;
-        let isDataReady = false;
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                tracker.gpuVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'N/A';
+                tracker.gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'N/A';
+            }
+        } catch {}
 
-        //--- State and Data Collection ---
-        let metrics = {
-            sessionId: sessionId,
-            status: 'initial'
-        };
-
-        // Asynchronously fetch all data and then mark as ready
-        async function fetchAllData() {
+        if ('getBattery' in navigator) {
             try {
-                // Fetch IP and Geo data concurrently
-                const [ipResponse, geoResponse] = await Promise.all([
-                    fetch(IP_SERVICE_URL),
-                    fetch(GEO_SERVICE_URL)
-                ]);
-                
-                const ipData = await ipResponse.json();
-                const geoData = await geoResponse.json();
+                const battery = await navigator.getBattery();
+                tracker.batteryLevel = (battery.level * 100).toFixed(2) + '%';
+                tracker.batteryCharging = battery.charging;
+            } catch {}
+        }
 
-                // Update metrics with fetched data
-                metrics.ipAddress = ipData.ip;
-                metrics.geolocation = {
-                    country: geoData.country_name,
-                    city: geoData.city,
-                    region: geoData.region,
-                    isp: geoData.org,
-                    latitude: geoData.latitude,
-                    longitude: geoData.longitude
-                };
-            } catch (error) {
-                console.error("Failed to fetch IP or Geo data:", error);
-                metrics.ipAddress = 'unknown';
-                metrics.geolocation = {
-                    country: 'unknown',
-                    city: 'unknown',
-                    region: 'unknown',
-                    isp: 'unknown',
-                    latitude: 0.0,
-                    longitude: 0.0
-                };
+        tracker.browser = getBrowserInfo();
+        tracker.deviceName = getDeviceName();
+        tracker.prefersDarkMode = window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    function sendData(status) {
+        if (dataSent) return;
+        tracker.timeOnPage = Math.round((performance.now() - startTime) / 1000);
+        tracker.maxScrollPercent = Math.round(maxScrollPercent);
+        tracker.status = status;
+        tracker.timestamp = new Date().toISOString();
+
+        const blob = new Blob([JSON.stringify(tracker)], { type: 'application/json' });
+        navigator.sendBeacon(workerUrl, blob);
+        dataSent = true;
+    }
+
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                sendData('exit_mobile');
             }
-            
-            // Gather synchronous data that doesn't require a network request
-            metrics.cpuCores = navigator.hardwareConcurrency;
-            metrics.gpuRenderer = getGpuRenderer();
-            metrics.platform = navigator.platform;
-            metrics.language = navigator.language;
-            metrics.referrer = document.referrer || 'direct_or_unknown';
-            metrics.browser = getBrowserInfo();
-            metrics.screenResolution = `${window.screen.width}x${window.screen.height}`;
-            metrics.windowSize = `${window.innerWidth}x${window.innerHeight}`;
-            metrics.prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            
-            // Mark data as ready once all collection is complete
-            isDataReady = true;
-        }
-        
-        // Start data collection immediately
-        await fetchAllData();
-        
-        // Function to get the current scroll percentage
-        function getScrollPercent() {
-            const docElem = document.documentElement;
-            const body = document.body;
-            const scrollTop = docElem.scrollTop || body.scrollTop;
-            const scrollHeight = docElem.scrollHeight || body.scrollHeight;
-            const clientHeight = docElem.clientHeight;
-            return (scrollTop / (scrollHeight - clientHeight)) * 100 || 0;
-        }
-        
-        // Event listener for scroll to track max scroll depth
-        window.addEventListener('scroll', () => {
-            const currentScroll = getScrollPercent();
-            if (currentScroll > maxScrollPercent) {
-                maxScrollPercent = currentScroll;
-            }
-        }, { passive: true }); // Use passive to improve performance
+        }, { once: true });
 
-        //--- Final Data and Sending Logic ---
-        
-        /**
-         * Gathers all final metrics and sends them to the worker.
-         * This function should only be called on exit events.
-         * @param {string} status The status of the event (e.g., 'exit', 'abandon').
-         */
-        function sendAnalytics(status) {
-            if (hasSentOnExit || !isDataReady) return;
-            hasSentOnExit = true;
+        window.addEventListener('pagehide', () => sendData('exit_mobile_fallback'), { once: true });
+    } else {
+        window.addEventListener('pagehide', (event) => {
+            if (!event.persisted) sendData('exit_desktop');
+        }, { once: true });
 
-            try {
-                // Finalize metrics with the latest data
-                metrics.timestamp = new Date().toISOString();
-                metrics.timeSpentSec = Math.floor((Date.now() - startTime) / 1000);
-                metrics.maxScrollPercent = Math.round(maxScrollPercent);
-                metrics.status = status;
-                
-                // Use a non-blocking request for guaranteed delivery on page unload
-                const blob = new Blob([JSON.stringify(metrics)], { type: 'application/json' });
-                navigator.sendBeacon(WORKER_URL, blob);
-            } catch (error) {
-                console.error("Error sending analytics data:", error);
-                // Gracefully fail without affecting user experience
-            }
-        }
-        
-        //--- Device-Specific Logic for Sending ---
-        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        window.addEventListener('beforeunload', () => sendData('exit_desktop_fallback'), { once: true });
+    }
 
-        if (isMobile) {
-            // Mobile: Listen for 'visibilitychange' to detect app/tab switches
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') {
-                    sendAnalytics('exit_mobile');
-                }
-            });
-            // Fallback for older browsers or edge cases
-            window.addEventListener('pagehide', () => sendAnalytics('exit_mobile_fallback'));
-        } else {
-            // Desktop: Listen for 'pagehide' which is more specific to tab closure
-            // and navigation, and less likely to fire on a simple tab switch.
-            window.addEventListener('pagehide', () => sendAnalytics('exit_desktop'));
-            
-            // The 'beforeunload' event is a good fallback for very old browsers,
-            // but is not used as the primary method due to modern browser restrictions.
-        }
+    window.addEventListener('scroll', () => {
+        const docElem = document.documentElement;
+        const body = document.body;
+        const scrollTop = docElem.scrollTop || body.scrollTop;
+        const scrollHeight = docElem.scrollHeight || body.scrollHeight;
+        const clientHeight = docElem.clientHeight;
+        const currentScroll = (scrollTop / (scrollHeight - clientHeight)) * 100 || 0;
+        if (currentScroll > maxScrollPercent) maxScrollPercent = currentScroll;
+    }, { passive: true });
 
-        //--- Helper Functions ---
+    function getBrowserInfo() {
+        const ua = navigator.userAgent;
+        if (/edg/i.test(ua)) return "Edge";
+        if (/opr\//i.test(ua)) return "Opera";
+        if (/crios/i.test(ua)) return "Chrome (iOS)";
+        if (/chrome/i.test(ua)) return "Chrome";
+        if (/safari/i.test(ua)) return "Safari";
+        if (/firefox/i.test(ua)) return "Firefox";
+        return "Unknown";
+    }
 
-        function getGpuRenderer() {
-            try {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                return gl ? gl.getParameter(gl.RENDERER) : 'unsupported';
-            } catch (e) {
-                return 'blocked_or_error';
-            }
-        }
+    function getDeviceName() {
+        const ua = navigator.userAgent;
+        const match = ua.match(/\((?:[^;]*;){2}\s*([^;]*)\s+Build/);
+        if (match && match[1]) return match[1].trim();
+        if (/iPhone/.test(ua)) return "iPhone";
+        if (/iPad/.test(ua)) return "iPad";
+        return "Unknown Device";
+    }
 
-        function getBrowserInfo() {
-            const userAgent = navigator.userAgent;
-            if (userAgent.indexOf("Chrome") > -1) return "Chrome";
-            if (userAgent.indexOf("Safari") > -1) return "Safari";
-            if (userAgent.indexOf("Firefox") > -1) return "Firefox";
-            if (userAgent.indexOf("Edge") > -1) return "Edge";
-            if (userAgent.indexOf("Opera") > -1 || userAgent.indexOf("OPR") > -1) return "Opera";
-            return "Unknown";
-        }
-        
-    })();
+    collectAsyncData();
+})();
 </script>
+
 </body>
 </html>
+
