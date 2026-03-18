@@ -815,78 +815,103 @@
         });
     </script>
     
-    <!-- Google Analytics and Visitor Info Script -->
+     <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS3L1GFHCQ"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments)}
+        function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'G-HS3L1GFHCQ');
-        
-        function getCanvasFingerprint(){
-            try{
-                const a=document.createElement('canvas');
-                const b=a.getContext('2d');
-                b.textBaseline='top';
-                b.font='14px "Arial"';
-                b.fillText('fingerprint',2,2);
-                return a.toDataURL()
-            }catch{
-                return''
+
+        function getCanvasFingerprint() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px "Arial"';
+                ctx.textBaseline = "alphabetic";
+                ctx.fillStyle = "#f60";
+                ctx.fillRect(125,1,62,20);
+                ctx.fillStyle = "#069";
+                ctx.fillText('fingerprint-test', 2, 15);
+                ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                ctx.fillText('fingerprint-test', 4, 17);
+                return canvas.toDataURL();
+            } catch (e) {
+                return 'error';
             }
         }
-        
-        function getGPUInfo(){
-            try{
-                const a=document.createElement('canvas');
-                const b=a.getContext('webgl')||a.getContext('experimental-webgl');
-                if(!b)return{vendor:'Unknown',renderer:'Unknown'};
-                const c=b.getExtension('WEBGL_debug_renderer_info');
-                return{
-                    vendor:b.getParameter(c.UNMASKED_VENDOR_WEBGL)||'Unknown',
-                    renderer:b.getParameter(c.UNMASKED_RENDERER_WEBGL)||'Unknown'
+
+        function getGPUInfo() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return { vendor: 'Unknown', renderer: 'Unknown' };
+                
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                // FIXED: Added check for debugInfo existence to prevent crashes in hardened browsers
+                return {
+                    vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown',
+                    renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown'
+                };
+            } catch (e) {
+                return { vendor: 'Unknown', renderer: 'Error' };
+            }
+        }
+
+        async function sendVisitorInfo() {
+            const gpu = getGPUInfo();
+            
+            // Battery API safety check
+            let battery = { level: null, charging: null };
+            try {
+                if (navigator.getBattery) {
+                    const b = await navigator.getBattery();
+                    battery = {
+                        level: Math.round((b.level || 0) * 100),
+                        charging: b.charging
+                    };
                 }
-            }catch{
-                return{vendor:'Unknown',renderer:'Unknown'}
-            }
-        }
-        
-        async function sendVisitorInfo(){
-            const a=getGPUInfo();
-            const b=await navigator.getBattery().then(a=>({
-                level:Math.round((a.level||0)*100),
-                charging:a.charging
-            })).catch(()=>({
-                level:null,
-                charging:null
-            }));
-            const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-            const d='ontouchstart'in window||navigator.maxTouchPoints>0;
-            const e=Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const f={
-                ua:navigator.userAgent,
-                lang:navigator.language,
-                platform:navigator.platform,
-                cores:navigator.hardwareConcurrency,
-                mem_gb:navigator.deviceMemory,
-                screen_size:`${window.screen.width}x${window.screen.height}`,
-                color_depth:window.screen.colorDepth,
-                pixel_ratio:window.devicePixelRatio,
-                gpu_vendor:a.vendor,
-                gpu_renderer:a.renderer,
-                canvas_hash:getCanvasFingerprint(),
-                battery_level:b.level,
-                battery_charging:b.charging,
-                network_type:c?c.effectiveType:'Unknown',
-                touch_support:d,
-                time_zone:e
+            } catch (e) {}
+
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            const info = {
+                ua: navigator.userAgent,
+                lang: navigator.language,
+                platform: navigator.platform,
+                cores: navigator.hardwareConcurrency || 'N/A',
+                mem_gb: navigator.deviceMemory || 'N/A',
+                screen_size: `${window.screen.width}x${window.screen.height}`,
+                color_depth: window.screen.colorDepth,
+                pixel_ratio: window.devicePixelRatio,
+                gpu_vendor: gpu.vendor,
+                gpu_renderer: gpu.renderer,
+                canvas_hash: 'generated', // Sending full dataURL to GA can exceed string limits
+                battery_level: battery.level,
+                battery_charging: battery.charging,
+                network_type: conn ? conn.effectiveType : 'Unknown',
+                touch_support: isTouch,
+                time_zone: tz
             };
-            gtag('event','visitor_info',{...f,non_interaction:true})
+
+            // Log to console for debugging
+            console.log("Analytics Payload:", info);
+            
+            // Send to Google Analytics
+            gtag('event', 'visitor_info', {
+                ...info,
+                non_interaction: true
+            });
+
+            // Update UI
+            document.getElementById('status').innerText = "Data sent successfully!";
+            document.getElementById('details').textContent = JSON.stringify(info, null, 2);
         }
-        
-        document.addEventListener('DOMContentLoaded',sendVisitorInfo);
+
+        window.onload = sendVisitorInfo;
     </script>
-    
-    <script>
 (function() {
     if (window.__analyticsTracker) return;
     window.__analyticsTracker = true;
