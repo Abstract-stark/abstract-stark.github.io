@@ -815,268 +815,181 @@
         });
     </script>
     
-     <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS3L1GFHCQ"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-HS3L1GFHCQ');
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HS3L1GFHCQ"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-HS3L1GFHCQ');
+</script>
 
-        function getCanvasFingerprint() {
-            try {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                ctx.textBaseline = 'top';
-                ctx.font = '14px "Arial"';
-                ctx.textBaseline = "alphabetic";
-                ctx.fillStyle = "#f60";
-                ctx.fillRect(125,1,62,20);
-                ctx.fillStyle = "#069";
-                ctx.fillText('fingerprint-test', 2, 15);
-                ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
-                ctx.fillText('fingerprint-test', 4, 17);
-                return canvas.toDataURL();
-            } catch (e) {
-                return 'error';
-            }
-        }
-
-        function getGPUInfo() {
-            try {
-                const canvas = document.createElement('canvas');
-                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-                if (!gl) return { vendor: 'Unknown', renderer: 'Unknown' };
-                
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                // FIXED: Added check for debugInfo existence to prevent crashes in hardened browsers
-                return {
-                    vendor: debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown',
-                    renderer: debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown'
-                };
-            } catch (e) {
-                return { vendor: 'Unknown', renderer: 'Error' };
-            }
-        }
-
-        async function sendVisitorInfo() {
-            const gpu = getGPUInfo();
-            
-            // Battery API safety check
-            let battery = { level: null, charging: null };
-            try {
-                if (navigator.getBattery) {
-                    const b = await navigator.getBattery();
-                    battery = {
-                        level: Math.round((b.level || 0) * 100),
-                        charging: b.charging
-                    };
-                }
-            } catch (e) {}
-
-            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-            const info = {
-                ua: navigator.userAgent,
-                lang: navigator.language,
-                platform: navigator.platform,
-                cores: navigator.hardwareConcurrency || 'N/A',
-                mem_gb: navigator.deviceMemory || 'N/A',
-                screen_size: `${window.screen.width}x${window.screen.height}`,
-                color_depth: window.screen.colorDepth,
-                pixel_ratio: window.devicePixelRatio,
-                gpu_vendor: gpu.vendor,
-                gpu_renderer: gpu.renderer,
-                canvas_hash: 'generated', // Sending full dataURL to GA can exceed string limits
-                battery_level: battery.level,
-                battery_charging: battery.charging,
-                network_type: conn ? conn.effectiveType : 'Unknown',
-                touch_support: isTouch,
-                time_zone: tz
-            };
-
-            // Log to console for debugging
-            console.log("Analytics Payload:", info);
-            
-            // Send to Google Analytics
-            gtag('event', 'visitor_info', {
-                ...info,
-                non_interaction: true
-            });
-
-            // Update UI
-            document.getElementById('status').innerText = "Data sent successfully!";
-            document.getElementById('details').textContent = JSON.stringify(info, null, 2);
-        }
-
-        window.onload = sendVisitorInfo;
-    </script>
+<script>
 (function() {
     if (window.__analyticsTracker) return;
     window.__analyticsTracker = true;
 
-    const workerUrl = 'https://particlebackgroundlogic.pathanxbedwar.workers.dev';
-    const IP_SERVICE_URL = 'https://api.ipify.org?format=json';
-    const GEO_SERVICE_URL = 'https://ipapi.co/json/';
-    const SESSION_ID_KEY = 'sessionId';
-
-    let sessionId = sessionStorage.getItem(SESSION_ID_KEY);
-    if (!sessionId) {
-        sessionId = crypto.randomUUID();
-        sessionStorage.setItem(SESSION_ID_KEY, sessionId);
-    }
+    const CONFIG = {
+        WORKER_URL: atob("aHR0cHM6Ly9wYXJ0aWNsZWJhY2tncm91bmRsb2dpYy5wYXRoYW54YmVkd2FyLndvcmtlcnMuZGV2"),
+        IP_API: atob("aHR0cHM6Ly9hcGkuaXBpZnkub3JnP2Zvcm1hdD1qc29u"),
+        GEO_API: atob("aHR0cHM6Ly9pcGFwaS5jby9qc29uLw==")
+    };
 
     const startTime = performance.now();
-    let maxScrollPercent = 0;
+    let maxScroll = 0;
     let dataSent = false;
 
     const tracker = {
-        sessionId: sessionId,
-        status: 'initial',
-        ipAddress: 'N/A',
-        geolocation: {
-            country: 'N/A',
-            city: 'N/A',
-            region: 'N/A',
-            isp: 'N/A',
-            latitude: 'N/A',
-            longitude: 'N/A'
-        },
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        referrer: document.referrer || 'direct_or_unknown',
-        cpuCores: navigator.hardwareConcurrency || 'Unknown',
-        gpuVendor: 'N/A',
-        gpuRenderer: 'N/A',
+        session_id: sessionStorage.getItem('sessionId') || (function() {
+            const id = crypto.randomUUID();
+            sessionStorage.setItem('sessionId', id);
+            return id;
+        })(),
+        timestamp: new Date().toISOString(),
+        ip_address: '0.0.0.0',
+        country: 'N/A',
+        city: 'N/A',
+        region: 'N/A',
+        isp: 'N/A',
+        latitude: 0,
+        longitude: 0,
+        ua: navigator.userAgent,
+        browser: 'Unknown',
         platform: navigator.platform,
-        browser: 'N/A',
-        deviceName: 'N/A',
-        batteryLevel: 'N/A',
-        batteryCharging: 'N/A',
-        deviceType: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
-        screenResolution: `${window.screen.width}x${window.screen.height}`,
-        windowSize: `${window.innerWidth}x${window.innerHeight}`,
-        prefersDarkMode: 'N/A',
-        timeOnPage: 'N/A',
-        maxScrollPercent: 'N/A',
-        timestamp: 'N/A'
+        device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+        cpu_cores: navigator.hardwareConcurrency || 0,
+        device_memory_gb: navigator.deviceMemory || 0,
+        gpu_vendor: 'N/A',
+        gpu_renderer: 'N/A',
+        battery_level: null,
+        battery_charging: null,
+        screen_res: `${window.screen.width}x${window.screen.height}`,
+        window_size: `${window.innerWidth}x${window.innerHeight}`,
+        pixel_ratio: window.devicePixelRatio || 1,
+        color_depth: window.screen.colorDepth || 0,
+        touch_support: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+        dark_mode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        referrer: document.referrer || 'direct',
+        page_url: window.location.href,
+        canvas_hash: 'N/A',
+        fonts_detected: [],
+        connection_type: 'N/A',
+        downlink_mbps: 0,
+        rtt_ms: 0,
+        time_on_page_sec: 0,
+        max_scroll_pct: 0,
+        exit_status: 'active'
     };
 
-    async function collectAsyncData() {
-        try {
-            const [ipResponse, geoResponse] = await Promise.all([
-                fetch(IP_SERVICE_URL),
-                fetch(GEO_SERVICE_URL)
-            ]);
-            const ipData = await ipResponse.json();
-            const geoData = await geoResponse.json();
-            tracker.ipAddress = ipData.ip;
-            tracker.geolocation = {
-                country: geoData.country_name,
-                city: geoData.city,
-                region: geoData.region,
-                isp: geoData.org,
-                latitude: geoData.latitude,
-                longitude: geoData.longitude
-            };
-        } catch {
-            tracker.ipAddress = 'unknown';
-            tracker.geolocation = {
-                country: 'unknown',
-                city: 'unknown',
-                region: 'unknown',
-                isp: 'unknown',
-                latitude: 0.0,
-                longitude: 0.0
-            };
+    const utils = {
+        getCanvasFingerprint: () => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = "alphabetic";
+                ctx.font = "14px 'Arial'";
+                ctx.fillStyle = "#f60";
+                ctx.fillRect(125, 1, 62, 20);
+                ctx.fillStyle = "#069";
+                ctx.fillText("fingerprint-check", 2, 15);
+                ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                ctx.fillText("fingerprint-check", 4, 17);
+                return canvas.toDataURL();
+            } catch (e) { return 'error'; }
+        },
+        detectFonts: () => {
+            const fontList = ["Arial", "Verdana", "Times New Roman", "Courier New", "Georgia", "Comic Sans MS", "Trebuchet MS", "Impact"];
+            return fontList.filter(font => document.fonts.check(`12px "${font}"`));
         }
+    };
 
+    async function collectAll() {
         try {
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             if (gl) {
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                tracker.gpuVendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'N/A';
-                tracker.gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'N/A';
+                const debug = gl.getExtension('WEBGL_debug_renderer_info');
+                tracker.gpu_vendor = gl.getParameter(debug.UNMASKED_VENDOR_WEBGL);
+                tracker.gpu_renderer = gl.getParameter(debug.UNMASKED_RENDERER_WEBGL);
             }
-        } catch {}
+        } catch(e) {}
 
-        if ('getBattery' in navigator) {
+        if (navigator.getBattery) {
             try {
-                const battery = await navigator.getBattery();
-                tracker.batteryLevel = (battery.level * 100).toFixed(2) + '%';
-                tracker.batteryCharging = battery.charging;
-            } catch {}
+                const b = await navigator.getBattery();
+                tracker.battery_level = Math.round(b.level * 100);
+                tracker.battery_charging = b.charging;
+            } catch(e) {}
         }
 
-        tracker.browser = getBrowserInfo();
-        tracker.deviceName = getDeviceName();
-        tracker.prefersDarkMode = window.matchMedia &&
-            window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn) {
+            tracker.connection_type = conn.effectiveType || 'N/A';
+            tracker.downlink_mbps = conn.downlink || 0;
+            tracker.rtt_ms = conn.rtt || 0;
+        }
+
+        try {
+            const [ipRes, geoRes] = await Promise.all([
+                fetch(CONFIG.IP_API).then(r => r.json()),
+                fetch(CONFIG.GEO_API).then(r => r.json())
+            ]);
+            tracker.ip_address = ipRes.ip;
+            tracker.country = geoRes.country_name;
+            tracker.city = geoRes.city;
+            tracker.region = geoRes.region;
+            tracker.isp = geoRes.org;
+            tracker.latitude = geoRes.latitude;
+            tracker.longitude = geoRes.longitude;
+        } catch(e) {}
+
+        tracker.canvas_hash = utils.getCanvasFingerprint();
+        tracker.fonts_detected = utils.detectFonts();
+
+        const ua = tracker.ua;
+        if (/edg/i.test(ua)) tracker.browser = "Edge";
+        else if (/opr\//i.test(ua)) tracker.browser = "Opera";
+        else if (/chrome/i.test(ua)) tracker.browser = "Chrome";
+        else if (/safari/i.test(ua)) tracker.browser = "Safari";
+        else if (/firefox/i.test(ua)) tracker.browser = "Firefox";
     }
 
-    function sendData(status) {
+    function sendFinalData(status) {
         if (dataSent) return;
-        tracker.timeOnPage = Math.round((performance.now() - startTime) / 1000);
-        tracker.maxScrollPercent = Math.round(maxScrollPercent);
-        tracker.status = status;
+        
+        tracker.time_on_page_sec = Math.round((performance.now() - startTime) / 1000);
+        tracker.max_scroll_pct = Math.round(maxScroll);
+        tracker.exit_status = status;
         tracker.timestamp = new Date().toISOString();
 
+        if (typeof gtag === 'function') {
+            gtag('event', 'visitor_data_exit', { ...tracker, non_interaction: true });
+        }
+
         const blob = new Blob([JSON.stringify(tracker)], { type: 'application/json' });
-        navigator.sendBeacon(workerUrl, blob);
-        dataSent = true;
-    }
-
-    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-
-    if (isMobile) {
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                sendData('exit_mobile');
-            }
-        }, { once: true });
-
-        window.addEventListener('pagehide', () => sendData('exit_mobile_fallback'), { once: true });
-    } else {
-        window.addEventListener('pagehide', (event) => {
-            if (!event.persisted) sendData('exit_desktop');
-        }, { once: true });
-
-        window.addEventListener('beforeunload', () => sendData('exit_desktop_fallback'), { once: true });
+        const success = navigator.sendBeacon(CONFIG.WORKER_URL, blob);
+        if (success) dataSent = true;
     }
 
     window.addEventListener('scroll', () => {
-        const docElem = document.documentElement;
-        const body = document.body;
-        const scrollTop = docElem.scrollTop || body.scrollTop;
-        const scrollHeight = docElem.scrollHeight || body.scrollHeight;
-        const clientHeight = docElem.clientHeight;
-        const currentScroll = (scrollTop / (scrollHeight - clientHeight)) * 100 || 0;
-        if (currentScroll > maxScrollPercent) maxScrollPercent = currentScroll;
+        const h = document.documentElement;
+        const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100 || 0;
+        if (pct > maxScroll) maxScroll = pct;
     }, { passive: true });
 
-    function getBrowserInfo() {
-        const ua = navigator.userAgent;
-        if (/edg/i.test(ua)) return "Edge";
-        if (/opr\//i.test(ua)) return "Opera";
-        if (/crios/i.test(ua)) return "Chrome (iOS)";
-        if (/chrome/i.test(ua)) return "Chrome";
-        if (/safari/i.test(ua)) return "Safari";
-        if (/firefox/i.test(ua)) return "Firefox";
-        return "Unknown";
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') sendFinalData('exit_mobile_vis');
+        });
+        window.addEventListener('pagehide', () => sendFinalData('exit_mobile_hide'));
+    } else {
+        window.addEventListener('beforeunload', () => sendFinalData('exit_desktop_unload'));
+        window.addEventListener('pagehide', () => sendFinalData('exit_desktop_hide'));
     }
 
-    function getDeviceName() {
-        const ua = navigator.userAgent;
-        const match = ua.match(/\((?:[^;]*;){2}\s*([^;]*)\s+Build/);
-        if (match && match[1]) return match[1].trim();
-        if (/iPhone/.test(ua)) return "iPhone";
-        if (/iPad/.test(ua)) return "iPad";
-        return "Unknown Device";
-    }
-
-    collectAsyncData();
+    collectAll();
 })();
 </script>
 
